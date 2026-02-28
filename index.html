@@ -584,8 +584,15 @@ td .text-secondary { font-size: 11px; color: var(--text-2); }
       <button id="login-btn" class="btn btn-primary w-full" style="margin-top:6px;justify-content:center;padding:11px" onclick="Auth.login()">
         Ingresar →
       </button>
+      <div style="margin-top:12px;text-align:center">
+        <a href="#" onclick="Auth.debugLogin();return false;" style="font-size:11px;color:#64748b;text-decoration:underline">🔍 Probar conexión</a>
+      </div>
+      <div id="login-debug" style="display:none;margin-top:10px;background:#0f172a;border-radius:6px;padding:10px 12px;font-size:11px;font-family:monospace;color:#94a3b8;max-height:200px;overflow-y:auto;white-space:pre-wrap;word-break:break-all"></div>
     </div>
-    <div class="login-footer">SynclickCRM v1.0</div>
+    <div class="login-footer">
+      Synclick v1.0
+      <span id="setup-link-wrap" style="display:none"> · <a href="#" onclick="Auth.showSetupModal();return false;" style="color:#64748b;text-decoration:underline;font-size:11px">Configuración inicial</a></span>
+    </div>
   </div>
 </div>
 
@@ -696,7 +703,7 @@ td .text-secondary { font-size: 11px; color: var(--text-2); }
 // ════════════════════════════════════════════
 const CONFIG = {
   // ⬇ Pegá tu URL de Apps Script aquí para que todos los usuarios la tengan automáticamente
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbxHEcRtfuKIrTjwTqmFRehk0eAj-1kdSWV-xl4HD4E_0kKIQCw-GqqWb4CNtv40ICyv/exec',
+  GAS_URL: localStorage.getItem('gas_url') || 'https://script.google.com/macros/s/AKfycbxHEcRtfuKIrTjwTqmFRehk0eAj-1kdSWV-xl4HD4E_0kKIQCw-GqqWb4CNtv40ICyv/exec',
   SYNC_INTERVAL: 30000,
   APP_VERSION: '1.0.0',
   CURRENT_USER: null, // set by Auth after login
@@ -784,20 +791,37 @@ const Auth = (() => {
       errEl.style.display = 'block'; errEl.textContent = 'Completá usuario y contraseña.'; return;
     }
 
+    if (!CONFIG.GAS_URL) {
+      errEl.style.display = 'block'; errEl.textContent = 'Servidor no configurado. Contactá al administrador.'; return;
+    }
+
     if (btnEl) { btnEl.disabled = true; btnEl.textContent = 'Verificando…'; }
 
-    const users = await fetchUsers();
+    let users = [], fetchError = null;
+    try { users = await fetchUsers(); } catch(e) { fetchError = e.message; }
 
     if (btnEl) { btnEl.disabled = false; btnEl.textContent = 'Ingresar'; }
 
+    if (users.length === 0) {
+      errEl.style.display = 'block';
+      errEl.innerHTML = `No se pudo obtener usuarios del servidor.` +
+        (fetchError ? ` Error: ${fetchError}` : '') +
+        ` <a href="${CONFIG.GAS_URL}?action=pull&entity=users" target="_blank" style="color:var(--accent);font-size:11px">Verificar →</a>`;
+      return;
+    }
+
     const user = users.find(u => u.username?.toLowerCase() === username);
-    if (!user) { errEl.style.display='block'; errEl.textContent='Usuario no encontrado.'; return; }
+    if (!user) {
+      errEl.style.display='block';
+      errEl.textContent='Usuario "' + username + '" no encontrado (' + users.length + ' usuario' + (users.length!==1?'s':'') + ' en Sheets).';
+      return;
+    }
 
     const isActive = user.active===true || user.active==='true' || user.active===1;
     if (!isActive) { errEl.style.display='block'; errEl.textContent='Tu cuenta está inactiva. Contactá al administrador.'; return; }
 
     if (!user.hash || !user.salt) {
-      errEl.style.display='block'; errEl.textContent='Credenciales no configuradas. Contactá al administrador.'; return;
+      errEl.style.display='block'; errEl.textContent='Credenciales incompletas. Ejecutá repairSheetHeaders() en Apps Script y creá el usuario de nuevo.'; return;
     }
 
     const hash = await hashPassword(password, user.salt);
@@ -858,6 +882,107 @@ const Auth = (() => {
 
   function can(perm) { return ROLE_PERMS[CONFIG.CURRENT_USER?.role || 'agente']?.[perm] ?? false; }
 
+  // Muestra el modal de setup inicial — solo cuando no hay usuarios en Sheets
+  function showSetupModal() {
+    const overlay = document.createElement('div');
+    overlay.id = 'setup-overlay';
+    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:9999';
+    overlay.innerHTML = `
+      <div style="background:var(--surface);border-radius:var(--radius);padding:28px 32px;width:100%;max-width:400px;box-shadow:0 20px 60px rgba(0,0,0,.4)">
+        <div style="font-size:16px;font-weight:700;margin-bottom:4px">⚙️ Configuración inicial</div>
+        <div style="font-size:12.5px;color:var(--text-2);margin-bottom:20px">Creá el primer usuario administrador del sistema.</div>
+        <div class="form-group"><label class="form-label">Nombre completo</label><input class="form-control" id="setup-name" placeholder="Ej: Administrador"></div>
+        <div class="form-group"><label class="form-label">Nombre de usuario</label><input class="form-control" id="setup-username" placeholder="admin" autocomplete="off"></div>
+        <div class="form-group"><label class="form-label">Contraseña</label><input class="form-control" id="setup-pass" type="password" placeholder="Mínimo 6 caracteres"></div>
+        <div class="form-group"><label class="form-label">Confirmar contraseña</label><input class="form-control" id="setup-pass2" type="password" placeholder="Repetir contraseña"></div>
+        <div id="setup-error" style="display:none;color:var(--danger);font-size:12.5px;margin-bottom:12px"></div>
+        <div style="display:flex;gap:8px;justify-content:flex-end">
+          <button class="btn btn-secondary" onclick="document.getElementById('setup-overlay').remove()">Cancelar</button>
+          <button class="btn btn-primary" id="setup-submit" onclick="Auth._doSetup()">Crear administrador</button>
+        </div>
+      </div>`;
+    document.body.appendChild(overlay);
+  }
+
+  async function _doSetup() {
+    const name     = document.getElementById('setup-name').value.trim();
+    const username = document.getElementById('setup-username').value.trim().toLowerCase();
+    const pass     = document.getElementById('setup-pass').value;
+    const pass2    = document.getElementById('setup-pass2').value;
+    const errEl    = document.getElementById('setup-error');
+    const btn      = document.getElementById('setup-submit');
+    errEl.style.display = 'none';
+
+    if (!name || !username) { errEl.style.display='block'; errEl.textContent='Completá nombre y usuario.'; return; }
+    if (pass.length < 6)    { errEl.style.display='block'; errEl.textContent='La contraseña debe tener al menos 6 caracteres.'; return; }
+    if (pass !== pass2)     { errEl.style.display='block'; errEl.textContent='Las contraseñas no coinciden.'; return; }
+
+    btn.disabled = true; btn.textContent = 'Creando…';
+    try {
+      await createUser({ username, name, role: 'admin', password: pass, active: true });
+      await Sync.forceSync();
+      document.getElementById('setup-overlay').remove();
+      // Ocultar el link de setup
+      const wrap = document.getElementById('setup-link-wrap');
+      if (wrap) wrap.style.display = 'none';
+      // Mostrar mensaje de éxito en el login
+      const errLogin = document.getElementById('login-error');
+      errLogin.style.color = '#16a34a';
+      errLogin.style.display = 'block';
+      errLogin.textContent = '✅ Administrador creado. Ya podés iniciar sesión.';
+    } catch(e) {
+      btn.disabled = false; btn.textContent = 'Crear administrador';
+      errEl.style.display = 'block'; errEl.textContent = e.message;
+    }
+  }
+
+  // Verificar si hay usuarios en Sheets y mostrar/ocultar el link de setup
+  async function debugLogin() {
+    const box = document.getElementById('login-debug');
+    box.style.display = 'block';
+    box.textContent = '⏳ Probando conexión...\n';
+
+    const log = (msg) => { box.textContent += msg + '\n'; box.scrollTop = box.scrollHeight; };
+
+    log('GAS_URL: ' + (CONFIG.GAS_URL || '(vacía)'));
+
+    if (!CONFIG.GAS_URL || CONFIG.GAS_URL === 'TU_URL_AQUI') {
+      log('❌ GAS_URL no configurada'); return;
+    }
+
+    // Test 1: JSONP ping
+    log('\n— Test 1: JSONP ping —');
+    try {
+      const ping = await fetchJSONP(CONFIG.GAS_URL + '?action=ping');
+      log('✅ Ping OK: ' + JSON.stringify(ping));
+    } catch(e) {
+      log('❌ Ping falló: ' + e.message);
+    }
+
+    // Test 2: Traer usuarios
+    log('\n— Test 2: Usuarios desde Sheets —');
+    try {
+      const data = await fetchJSONP(CONFIG.GAS_URL + '?action=pull&entity=users');
+      const users = data?.users || [];
+      log('Respuesta cruda: ' + JSON.stringify(data).slice(0, 300));
+      log('Total usuarios: ' + users.length);
+      users.forEach(u => {
+        log(`  · ${u.username} | hash: ${u.hash ? u.hash.slice(0,8)+'...' : 'NULL'} | salt: ${u.salt ? u.salt.slice(0,8)+'...' : 'NULL'} | active: ${u.active}`);
+      });
+    } catch(e) {
+      log('❌ Pull usuarios falló: ' + e.message);
+    }
+  }
+
+  async function checkFirstRun() {
+    if (!CONFIG.GAS_URL) return;
+    try {
+      const users = await fetchUsers();
+      const wrap = document.getElementById('setup-link-wrap');
+      if (wrap) wrap.style.display = users.length === 0 ? 'inline' : 'none';
+    } catch(e) {}
+  }
+
   function togglePassword() {
     const input = document.getElementById('login-pass');
     const btn = document.getElementById('pass-toggle-btn');
@@ -873,7 +998,8 @@ const Auth = (() => {
   });
 
   return { login, logout, checkSession, can, applySession, createUser, fetchUsers, getUsers,
-           hashPassword, genSalt, togglePassword, toggleProfileMenu, closeProfileMenu };
+           hashPassword, genSalt, togglePassword, toggleProfileMenu, closeProfileMenu,
+           showSetupModal, _doSetup, checkFirstRun, debugLogin };
 })();
 // ════════════════════════════════════════════
 // UTILS
@@ -3849,6 +3975,7 @@ async function init() {
     Router.render();
   } else {
     Sync.init();
+    Auth.checkFirstRun(); // mostrar link de setup si no hay usuarios
   }
 }
 
