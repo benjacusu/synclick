@@ -1,0 +1,3908 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="theme-color" content="#0f172a">
+<title>SynclickCRM</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #f2f1ed;
+  --surface: #ffffff;
+  --sidebar: #0f172a;
+  --sidebar-hover: #1e293b;
+  --sidebar-active: #e85d26;
+  --accent: #e85d26;
+  --accent-light: #fff2ed;
+  --accent2: #0ea5e9;
+  --text: #18181b;
+  --text-2: #71717a;
+  --text-3: #a1a1aa;
+  --border: #e4e4e7;
+  --success: #16a34a;
+  --warning: #d97706;
+  --danger: #dc2626;
+  --info: #0284c7;
+  --radius: 10px;
+  --radius-sm: 7px;
+  --shadow: 0 1px 3px rgba(0,0,0,.08), 0 4px 12px rgba(0,0,0,.06);
+  --shadow-lg: 0 8px 30px rgba(0,0,0,.12);
+  --sidebar-w: 220px;
+  --font-head: 'Bricolage Grotesque', sans-serif;
+  --font-body: 'DM Sans', sans-serif;
+}
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { font-size: 13px; }
+html, body { height: 100%; font-family: var(--font-body); background: var(--bg); color: var(--text); }
+body { display: flex; overflow: hidden; }
+
+/* ─── SIDEBAR ─── */
+#sidebar {
+  width: var(--sidebar-w); min-width: var(--sidebar-w);
+  background: var(--sidebar); color: #e2e8f0;
+  display: flex; flex-direction: column;
+  height: 100vh; overflow-y: auto;
+  position: relative; z-index: 100;
+}
+.sidebar-logo {
+  padding: 16px 16px 12px;
+  font-family: var(--font-head);
+  font-size: 18px; font-weight: 800;
+  color: #fff; letter-spacing: -0.5px;
+}
+.sidebar-logo span { color: var(--accent); }
+.sidebar-section { padding: 6px 12px 3px; font-size: 9.5px; text-transform: uppercase; letter-spacing: 1px; color: #475569; font-weight: 500; margin-top: 6px; }
+.nav-item {
+  display: flex; align-items: center; gap: 8px;
+  padding: 7px 13px; margin: 1px 7px;
+  border-radius: var(--radius-sm); cursor: pointer;
+  color: #94a3b8; font-size: 12.5px; font-weight: 400;
+  transition: all .15s ease; text-decoration: none;
+}
+.nav-item:hover { background: var(--sidebar-hover); color: #e2e8f0; }
+.nav-item.active { background: var(--accent); color: #fff; font-weight: 500; }
+.nav-item .icon { width: 16px; height: 16px; opacity: .8; flex-shrink: 0; }
+.nav-item.active .icon { opacity: 1; }
+.sidebar-bottom { margin-top: auto; padding: 10px; border-top: 1px solid #1e293b; }
+.user-chip {
+  display: flex; align-items: center; gap: 10px;
+  padding: 8px 10px; border-radius: var(--radius-sm);
+  background: #1e293b; cursor: pointer;
+}
+.user-avatar { width: 30px; height: 30px; border-radius: 50%; background: var(--accent); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 12px; color: #fff; flex-shrink: 0; }
+.user-info { overflow: hidden; }
+.user-name { font-size: 13px; font-weight: 500; color: #e2e8f0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.user-role { font-size: 11px; color: #64748b; }
+
+/* ─── SYNC BADGE ─── */
+#sync-badge {
+  margin: 6px 10px; padding: 5px 8px;
+  border-radius: var(--radius-sm); font-size: 11px;
+  display: flex; align-items: center; gap: 5px;
+  background: #1e293b; color: #94a3b8;
+  cursor: pointer; transition: .15s;
+}
+#sync-badge.online { color: #4ade80; }
+#sync-badge.offline { color: #f87171; }
+#sync-badge.syncing { color: #facc15; }
+#sync-badge.pending { color: #fb923c; }
+.pulse { animation: pulse 1.5s infinite; }
+@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.4} }
+
+/* ─── MAIN ─── */
+#main {
+  flex: 1; display: flex; flex-direction: column;
+  overflow: hidden; height: 100vh; min-width: 0;
+}
+#topbar {
+  background: var(--surface); border-bottom: 1px solid var(--border);
+  padding: 9px 20px; display: flex; align-items: center; gap: 10px;
+  flex-shrink: 0;
+}
+#page-title { font-family: var(--font-head); font-size: 16px; font-weight: 700; color: var(--text); }
+.topbar-actions { margin-left: auto; display: flex; align-items: center; gap: 8px; }
+#content { flex: 1; overflow-y: auto; padding: 18px 20px; }
+
+/* ─── COMMON COMPONENTS ─── */
+.btn {
+  display: inline-flex; align-items: center; gap: 5px;
+  padding: 6px 13px; border-radius: var(--radius-sm);
+  font-family: var(--font-body); font-size: 12.5px; font-weight: 500;
+  cursor: pointer; border: none; transition: all .15s;
+  white-space: nowrap;
+}
+.btn-primary { background: var(--accent); color: #fff; }
+.btn-primary:hover { background: #d14f1e; }
+.btn-secondary { background: var(--bg); color: var(--text); border: 1px solid var(--border); }
+.btn-secondary:hover { background: var(--border); }
+.btn-ghost { background: transparent; color: var(--text-2); border: 1px solid transparent; }
+.btn-ghost:hover { background: var(--bg); border-color: var(--border); }
+.btn-danger { background: #fee2e2; color: var(--danger); }
+.btn-danger:hover { background: #fecaca; }
+.btn-sm { padding: 4px 9px; font-size: 11.5px; }
+.btn-icon { padding: 5px; }
+.card { background: var(--surface); border-radius: var(--radius); box-shadow: var(--shadow); padding: 16px; }
+.card-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+.card-title { font-family: var(--font-head); font-size: 14px; font-weight: 700; }
+
+/* ─── STATUS BADGES ─── */
+.badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 8px; border-radius: 99px; font-size: 11.5px; font-weight: 500;
+}
+.badge-prospecto { background: #dbeafe; color: #1d4ed8; }
+.badge-cliente { background: #dcfce7; color: #15803d; }
+.badge-inactivo { background: #f3f4f6; color: #6b7280; }
+.badge-otro { background: #fef3c7; color: #92400e; }
+.badge-pendiente { background: #fef3c7; color: #92400e; }
+.badge-en_curso { background: #dbeafe; color: #1d4ed8; }
+.badge-completada { background: #dcfce7; color: #15803d; }
+.badge-cancelada { background: #fee2e2; color: #991b1b; }
+.tag-chip {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 2px 8px; border-radius: 99px; font-size: 11.5px; font-weight: 500;
+  background: #f1f5f9; color: #475569; border: 1px solid #e2e8f0;
+}
+
+/* ─── FORM ─── */
+.form-group { margin-bottom: 11px; }
+.form-label { display: block; font-size: 11.5px; font-weight: 500; color: var(--text-2); margin-bottom: 4px; }
+.form-control {
+  width: 100%; padding: 6px 10px; border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm); font-family: var(--font-body); font-size: 12.5px;
+  background: var(--surface); color: var(--text); transition: border-color .15s;
+  outline: none;
+}
+.form-control:focus { border-color: var(--accent); }
+select.form-control { cursor: pointer; }
+textarea.form-control { resize: vertical; min-height: 70px; }
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; }
+
+/* ─── SEARCH ─── */
+.search-wrap { position: relative; }
+.search-wrap input { padding-left: 36px; }
+.search-wrap .search-icon { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); color: var(--text-3); pointer-events: none; }
+
+/* ─── TABLE ─── */
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; }
+th { text-align: left; font-size: 10.5px; font-weight: 600; color: var(--text-2); text-transform: uppercase; letter-spacing: .5px; padding: 8px 10px; border-bottom: 2px solid var(--border); white-space: nowrap; }
+td { padding: 8px 10px; border-bottom: 1px solid var(--border); font-size: 12.5px; }
+tr:last-child td { border-bottom: none; }
+tr:hover td { background: #fafaf9; }
+td .contact-name { font-weight: 600; color: var(--text); cursor: pointer; }
+td .contact-name:hover { color: var(--accent); }
+td .text-secondary { font-size: 11px; color: var(--text-2); }
+
+/* ─── MODAL ─── */
+#modal-overlay {
+  position: fixed; inset: 0; background: rgba(0,0,0,.45);
+  z-index: 1000; display: flex; align-items: center; justify-content: center;
+  opacity: 0; pointer-events: none; transition: opacity .2s;
+}
+#modal-overlay.open { opacity: 1; pointer-events: all; }
+.modal {
+  background: var(--surface); border-radius: var(--radius);
+  width: 560px; max-width: 95vw; max-height: 88vh;
+  overflow-y: auto; box-shadow: var(--shadow-lg);
+  transform: translateY(10px); transition: transform .2s;
+}
+#modal-overlay.open .modal { transform: translateY(0); }
+.modal-header {
+  padding: 14px 20px 12px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; background: var(--surface); z-index: 1;
+}
+.modal-title { font-family: var(--font-head); font-size: 15px; font-weight: 700; }
+.modal-body { padding: 16px 20px; }
+.modal-footer { padding: 11px 20px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 8px; }
+
+/* ─── TABS ─── */
+.tabs { display: flex; gap: 2px; border-bottom: 2px solid var(--border); margin-bottom: 20px; }
+.tab-btn {
+  padding: 8px 16px; font-size: 13.5px; font-weight: 500;
+  color: var(--text-2); cursor: pointer; border: none; background: transparent;
+  border-bottom: 2px solid transparent; margin-bottom: -2px; transition: .15s;
+  font-family: var(--font-body);
+}
+.tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); }
+.tab-btn:hover:not(.active) { color: var(--text); }
+.tab-pane { display: none; }
+.tab-pane.active { display: block; }
+
+/* ─── TIMELINE ─── */
+.timeline { position: relative; }
+.timeline-item { display: flex; gap: 14px; padding-bottom: 18px; position: relative; }
+.timeline-item::before { content:''; position: absolute; left: 15px; top: 28px; bottom: 0; width: 2px; background: var(--border); }
+.timeline-item:last-child::before { display: none; }
+.timeline-dot {
+  width: 30px; height: 30px; border-radius: 50%; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 13px; background: var(--accent-light); color: var(--accent);
+}
+.timeline-content { flex: 1; min-width: 0; }
+.timeline-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; }
+.timeline-type { font-weight: 600; font-size: 13.5px; }
+.timeline-meta { font-size: 11.5px; color: var(--text-3); flex-shrink: 0; }
+.timeline-desc { font-size: 13px; color: var(--text-2); margin-top: 3px; }
+.timeline-next { font-size: 12px; color: var(--accent); margin-top: 4px; }
+
+/* ─── STATS CARDS ─── */
+.stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; margin-bottom: 18px; }
+.stat-card {
+  background: var(--surface); border-radius: var(--radius); padding: 14px 16px;
+  box-shadow: var(--shadow); border-left: 3px solid var(--accent);
+}
+.stat-card:nth-child(2) { border-left-color: var(--accent2); }
+.stat-card:nth-child(3) { border-left-color: var(--success); }
+.stat-card:nth-child(4) { border-left-color: var(--warning); }
+.stat-value { font-family: var(--font-head); font-size: 24px; font-weight: 800; line-height: 1; }
+.stat-label { font-size: 11px; color: var(--text-2); margin-top: 3px; }
+
+/* ─── CALENDAR ─── */
+.calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; }
+.cal-header { text-align: center; font-size: 11px; font-weight: 600; color: var(--text-2); text-transform: uppercase; padding: 8px 4px; }
+.cal-day {
+  min-height: 80px; padding: 7px 6px 5px; border-radius: 6px;
+  background: var(--surface); border: 1px solid var(--border);
+  font-size: 12px; cursor: pointer; transition: .15s;
+  display: flex; flex-direction: column; gap: 3px; overflow: hidden;
+}
+.cal-day:hover { border-color: var(--accent); box-shadow: 0 2px 8px rgba(232,93,38,.12); }
+.cal-day.today { border-color: var(--accent); background: var(--accent-light); }
+.cal-day.other-month { opacity: .4; }
+.cal-day .day-num {
+  font-weight: 700; font-size: 11.5px; color: var(--text-2);
+  line-height: 1; margin-bottom: 2px; flex-shrink: 0;
+}
+.cal-day.today .day-num {
+  background: var(--accent); color: #fff; border-radius: 50%;
+  width: 19px; height: 19px; display: flex; align-items: center; justify-content: center; font-size: 10.5px;
+}
+.cal-task-card {
+  border-radius: 4px; padding: 2px 5px; font-size: 10.5px; line-height: 1.35;
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  font-weight: 500; flex-shrink: 0; border-left: 2.5px solid transparent;
+  transition: opacity .1s;
+}
+.cal-task-card:hover { opacity: .8; }
+.cal-task-card.pri-alta   { background: #fee2e2; color: #b91c1c; border-color: #ef4444; }
+.cal-task-card.pri-normal { background: #fef3c7; color: #92400e; border-color: #f59e0b; }
+.cal-task-card.pri-baja   { background: #dcfce7; color: #166534; border-color: #22c55e; }
+.cal-task-card.done       { background: #f1f5f9; color: var(--text-3); border-color: var(--border); text-decoration: line-through; opacity: .7; }
+.cal-more { font-size: 10px; color: var(--accent); font-weight: 600; padding: 0 2px; margin-top: 1px; flex-shrink: 0; }
+.cal-nav { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+.cal-nav h3 { font-family: var(--font-head); font-size: 17px; font-weight: 700; }
+
+/* ─── FILTER BAR ─── */
+.filter-bar { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+.filter-chip {
+  padding: 5px 12px; border-radius: 99px; font-size: 12.5px; font-weight: 500;
+  cursor: pointer; border: 1.5px solid var(--border); background: var(--surface);
+  color: var(--text-2); transition: .15s;
+}
+.filter-chip.active { border-color: var(--accent); background: var(--accent-light); color: var(--accent); }
+.filter-chip:hover:not(.active) { border-color: var(--text-2); color: var(--text); }
+
+/* ─── EMPTY STATE ─── */
+.empty-state { text-align: center; padding: 40px 20px; color: var(--text-2); }
+.empty-state .empty-icon { font-size: 40px; margin-bottom: 12px; opacity: .4; }
+.empty-state h3 { font-family: var(--font-head); font-size: 16px; font-weight: 700; color: var(--text); margin-bottom: 6px; }
+.empty-state p { font-size: 13px; }
+
+/* ─── CONFLICT ALERT ─── */
+.conflict-item { background: #fff7ed; border: 1px solid #fed7aa; border-radius: var(--radius-sm); padding: 12px 16px; margin-bottom: 8px; }
+.conflict-title { font-weight: 600; color: #92400e; font-size: 13.5px; }
+.conflict-detail { font-size: 12.5px; color: var(--text-2); margin-top: 4px; }
+
+/* ─── TOAST ─── */
+#toast-container { position: fixed; bottom: 24px; right: 24px; z-index: 9999; display: flex; flex-direction: column; gap: 8px; }
+.toast {
+  padding: 12px 16px; border-radius: var(--radius-sm); box-shadow: var(--shadow-lg);
+  font-size: 13.5px; font-weight: 500; max-width: 300px;
+  animation: slideIn .2s ease;
+}
+@keyframes slideIn { from { transform: translateX(20px); opacity: 0; } }
+.toast-success { background: #dcfce7; color: #15803d; border-left: 4px solid var(--success); }
+.toast-error { background: #fee2e2; color: var(--danger); border-left: 4px solid var(--danger); }
+.toast-info { background: #dbeafe; color: #1d4ed8; border-left: 4px solid var(--info); }
+.toast-warning { background: #fef3c7; color: #92400e; border-left: 4px solid var(--warning); }
+
+/* ─── CONTACT DETAIL HEADER ─── */
+.contact-hero {
+  background: var(--sidebar); color: #fff; border-radius: var(--radius);
+  padding: 24px; margin-bottom: 20px; display: flex; align-items: center; gap: 20px;
+}
+.contact-avatar-lg {
+  width: 60px; height: 60px; border-radius: 50%; background: var(--accent);
+  display: flex; align-items: center; justify-content: center;
+  font-family: var(--font-head); font-size: 22px; font-weight: 800; color: #fff; flex-shrink: 0;
+}
+.contact-hero-info { flex: 1; }
+.contact-hero-name { font-family: var(--font-head); font-size: 22px; font-weight: 800; }
+.contact-hero-sub { font-size: 13px; color: #94a3b8; margin-top: 2px; }
+.contact-hero-actions { display: flex; gap: 8px; flex-shrink: 0; }
+
+/* ─── INFO GRID ─── */
+.info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.info-field label { font-size: 11.5px; font-weight: 500; color: var(--text-3); text-transform: uppercase; letter-spacing: .5px; display: block; margin-bottom: 2px; }
+.info-field .info-value { font-size: 14px; color: var(--text); }
+
+/* ─── MULTI-ITEM ─── */
+.multi-item-list { display: flex; flex-direction: column; gap: 4px; margin-top: 4px; }
+.multi-item { display: flex; align-items: center; gap: 8px; }
+.multi-item input { flex: 1; }
+.multi-item .btn-remove { padding: 4px 6px; font-size: 14px; line-height: 1; }
+.add-item-btn { font-size: 12.5px; color: var(--accent); cursor: pointer; background: none; border: none; font-family: var(--font-body); padding: 4px 0; display: flex; align-items: center; gap: 4px; }
+
+/* ─── CAMPAIGN ─── */
+.campaign-card { cursor: pointer; transition: .15s; }
+.campaign-card:hover { box-shadow: var(--shadow-lg); }
+.campaign-meta { display: flex; gap: 12px; align-items: center; margin-top: 8px; font-size: 12.5px; color: var(--text-2); }
+.campaigns-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; margin-top: 16px; }
+
+/* ─── RESPONSIVE ─── */
+@media (max-width: 768px) {
+  #sidebar { width: 60px; min-width: 60px; }
+  .sidebar-logo, .sidebar-section, .nav-item span, .user-info, #sync-badge span { display: none; }
+  .nav-item { justify-content: center; padding: 10px; }
+  .stats-grid { grid-template-columns: 1fr 1fr; }
+  .form-row, .form-row-3 { grid-template-columns: 1fr; }
+  #content { padding: 16px; }
+}
+
+/* ─── UTILS ─── */
+.flex { display: flex; } .items-center { align-items: center; } .gap-2 { gap: 8px; } .gap-3 { gap: 12px; }
+.ml-auto { margin-left: auto; } .mb-2 { margin-bottom: 8px; } .mb-4 { margin-bottom: 16px; }
+.text-sm { font-size: 12.5px; } .text-muted { color: var(--text-2); }
+.fw-bold { font-weight: 600; } .mt-4 { margin-top: 16px; }
+.w-full { width: 100%; } .hidden { display: none !important; }
+.divider { height: 1px; background: var(--border); margin: 16px 0; }
+
+/* ─── NOTAS / NOVEDADES ─── */
+.nota-entry {
+  border-left: 3px solid var(--border); padding: 10px 14px;
+  margin-bottom: 10px; background: var(--bg); border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
+  transition: border-color .15s;
+}
+.nota-entry:hover { border-left-color: var(--accent2); }
+.nota-header { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.nota-avatar { width: 22px; height: 22px; border-radius: 50%; background: var(--accent); display: flex; align-items: center; justify-content: center; font-size: 9px; font-weight: 800; color: #fff; flex-shrink: 0; font-family: var(--font-head); }
+.nota-meta { font-size: 11px; color: var(--text-2); flex: 1; }
+.nota-meta strong { color: var(--text); font-weight: 600; }
+.nota-ts { font-size: 10.5px; color: var(--text-3); font-family: monospace; }
+.nota-body { font-size: 13px; color: var(--text); line-height: 1.6; white-space: pre-wrap; word-break: break-word; }
+.nota-compose {
+  background: var(--surface); border: 1.5px solid var(--border);
+  border-radius: var(--radius); padding: 12px; margin-bottom: 16px;
+  transition: border-color .15s;
+}
+.nota-compose:focus-within { border-color: var(--accent); }
+.nota-compose textarea {
+  width: 100%; border: none; outline: none; resize: none;
+  font-family: var(--font-body); font-size: 13px; color: var(--text);
+  background: transparent; min-height: 72px; line-height: 1.6;
+}
+.nota-compose textarea::placeholder { color: var(--text-3); }
+.nota-compose-footer {
+  display: flex; align-items: center; justify-content: space-between;
+  padding-top: 8px; border-top: 1px solid var(--border); margin-top: 8px;
+}
+.nota-count { font-size: 11px; color: var(--text-3); }
+.nota-count.near-limit { color: var(--warning); }
+.nota-immutable-badge {
+  display: inline-flex; align-items: center; gap: 4px;
+  font-size: 10.5px; color: var(--text-3); padding: 2px 7px;
+  border-radius: 99px; background: var(--bg); border: 1px solid var(--border);
+}
+/* ─── DOMICILIOS ─── */
+.domicilio-item { transition: box-shadow .15s; }
+.domicilio-item:hover { box-shadow: 0 2px 8px rgba(0,0,0,.08); }
+
+.drop-zone {
+  border: 2.5px dashed var(--border); border-radius: var(--radius);
+  padding: 44px 24px; text-align: center; cursor: pointer;
+  transition: all .2s ease; background: var(--surface);
+}
+.drop-zone:hover, .drop-zone.drag-over {
+  border-color: var(--accent); background: var(--accent-light);
+}
+.drop-zone .dz-icon { font-size: 40px; margin-bottom: 12px; }
+.drop-zone h3 { font-family: var(--font-head); font-size: 17px; font-weight: 700; margin-bottom: 6px; }
+.drop-zone p { font-size: 13px; color: var(--text-2); }
+.drop-zone input[type=file] { display: none; }
+
+/* ─── IMPORT PROGRESS ─── */
+.import-progress-bar {
+  height: 8px; background: var(--border); border-radius: 99px; overflow: hidden; margin: 8px 0;
+}
+.import-progress-fill {
+  height: 100%; background: var(--accent); border-radius: 99px;
+  transition: width .3s ease; width: 0%;
+}
+.import-row-preview { font-size: 12.5px; }
+.import-row-preview td { padding: 5px 8px; border-bottom: 1px solid var(--border); }
+.import-row-preview.row-ok { background: #f0fdf4; }
+.import-row-preview.row-warn { background: #fff7ed; }
+.import-row-preview.row-err { background: #fef2f2; }
+.col-map-select { font-size: 12.5px; padding: 3px 6px; border: 1.5px solid var(--border); border-radius: 6px; background: var(--surface); }
+
+/* ─── CHARTS ─── */
+.chart-wrap { position: relative; width: 100%; }
+.chart-svg { width: 100%; overflow: visible; }
+.chart-bar { transition: opacity .15s; cursor: pointer; }
+.chart-bar:hover { opacity: .7; }
+.chart-tooltip {
+  position: absolute; background: var(--sidebar); color: #e2e8f0;
+  padding: 6px 10px; border-radius: 6px; font-size: 12px;
+  pointer-events: none; opacity: 0; transition: opacity .1s;
+  white-space: nowrap; z-index: 10;
+}
+.chart-tooltip.visible { opacity: 1; }
+.chart-legend { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 12px; }
+.legend-item { display: flex; align-items: center; gap: 6px; font-size: 12px; color: var(--text-2); }
+.legend-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+
+/* ─── METRICS ─── */
+.metric-card {
+  background: var(--surface); border-radius: var(--radius); padding: 18px 20px;
+  box-shadow: var(--shadow); display: flex; flex-direction: column; gap: 6px;
+}
+.metric-value { font-family: var(--font-head); font-size: 28px; font-weight: 800; line-height: 1; }
+.metric-label { font-size: 12px; color: var(--text-2); }
+.metric-change { font-size: 12px; font-weight: 600; }
+.metric-change.up { color: var(--success); }
+.metric-change.down { color: var(--danger); }
+.metric-change.neutral { color: var(--text-2); }
+.agent-rank { display: flex; align-items: center; gap: 10px; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.agent-rank:last-child { border-bottom: none; }
+.rank-num { width: 24px; height: 24px; border-radius: 50%; background: var(--bg); display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 700; color: var(--text-2); flex-shrink: 0; }
+.rank-num.gold { background: #fef3c7; color: #92400e; }
+.rank-num.silver { background: #f1f5f9; color: #475569; }
+.rank-num.bronze { background: #fff7ed; color: #9a3412; }
+.rank-bar-wrap { flex: 1; }
+.rank-bar { height: 6px; background: var(--accent); border-radius: 99px; transition: width .6s cubic-bezier(.16,1,.3,1); }
+.rank-count { font-size: 12px; font-weight: 700; color: var(--text-2); flex-shrink: 0; }
+
+/* ─── AUDIT LOG ─── */
+.audit-row { display: flex; align-items: flex-start; gap: 12px; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 13px; }
+.audit-row:last-child { border-bottom: none; }
+.audit-icon { width: 28px; height: 28px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 12px; flex-shrink: 0; margin-top: 1px; }
+.audit-create { background: #dcfce7; }
+.audit-update { background: #dbeafe; }
+.audit-delete { background: #fee2e2; }
+.audit-campaign { background: #f3e8ff; }
+.audit-import { background: #fef3c7; }
+.audit-login  { background: #f0f9ff; }
+.audit-detail { flex: 1; min-width: 0; }
+.audit-title { font-weight: 500; }
+.audit-meta { font-size: 11.5px; color: var(--text-3); margin-top: 2px; }
+.date-range-pills { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 16px; }
+.date-pill { padding: 5px 12px; border-radius: 99px; font-size: 12.5px; font-weight: 500; cursor: pointer; border: 1.5px solid var(--border); background: var(--surface); color: var(--text-2); transition: .15s; }
+.date-pill.active { border-color: var(--accent); background: var(--accent-light); color: var(--accent); }
+
+/* ─── LOGIN SCREEN ─── */
+#login-screen {
+  position: fixed; inset: 0; z-index: 9000;
+  background: var(--sidebar);
+  display: flex; align-items: center; justify-content: center;
+  opacity: 1; transition: opacity .35s ease;
+}
+#login-screen.hide { opacity: 0; pointer-events: none; }
+.login-wrap {
+  width: 400px; max-width: 94vw;
+  animation: loginIn .4s cubic-bezier(.16,1,.3,1);
+}
+@keyframes loginIn { from { transform: translateY(24px); opacity: 0; } }
+.login-logo {
+  font-family: var(--font-head); font-size: 28px; font-weight: 800;
+  color: #fff; text-align: center; margin-bottom: 6px; letter-spacing: -1px;
+}
+.login-logo span { color: var(--accent); }
+.login-sub { text-align: center; color: #64748b; font-size: 13.5px; margin-bottom: 32px; }
+.login-card {
+  background: #1e293b; border-radius: var(--radius);
+  padding: 30px; box-shadow: 0 20px 60px rgba(0,0,0,.5);
+  border: 1px solid #334155;
+}
+.login-card .form-label { color: #94a3b8; }
+.login-card .form-control {
+  background: #0f172a; border-color: #334155; color: #e2e8f0;
+}
+.login-card .form-control:focus { border-color: var(--accent); }
+.login-card .form-control::placeholder { color: #475569; }
+#login-error {
+  background: #450a0a; border: 1px solid #991b1b; color: #fca5a5;
+  border-radius: var(--radius-sm); padding: 10px 14px; font-size: 13px;
+  margin-bottom: 14px; display: none;
+}
+.login-footer { text-align: center; margin-top: 16px; font-size: 12px; color: #475569; }
+.login-pass-wrap { position: relative; }
+.login-pass-toggle {
+  position: absolute; right: 10px; top: 50%; transform: translateY(-50%);
+  background: none; border: none; color: #64748b; cursor: pointer; font-size: 16px; padding: 2px;
+}
+
+/* ─── ROLE BADGES ─── */
+.badge-admin { background: #4c1d95; color: #c4b5fd; }
+.badge-supervisor { background: #0c4a6e; color: #7dd3fc; }
+.badge-agente { background: #064e3b; color: #6ee7b7; }
+.badge-inactivo-user { background: #1f2937; color: #6b7280; }
+
+/* ─── USER TABLE ─── */
+.user-row { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--border); }
+.user-row:last-child { border-bottom: none; }
+.user-row-avatar { width: 38px; height: 38px; border-radius: 50%; background: var(--accent); display: flex; align-items: center; justify-content: center; font-family: var(--font-head); font-weight: 800; font-size: 13px; color: #fff; flex-shrink: 0; }
+.user-row-info { flex: 1; min-width: 0; }
+.user-row-name { font-weight: 600; font-size: 14px; }
+.user-row-meta { font-size: 12px; color: var(--text-2); margin-top: 2px; }
+.user-row-actions { display: flex; gap: 6px; flex-shrink: 0; }
+
+/* ─── PERMISSION LOCK ─── */
+.perm-locked { opacity: .4; pointer-events: none; position: relative; }
+.perm-locked::after { content: '🔒'; position: absolute; right: 8px; top: 50%; transform: translateY(-50%); font-size: 12px; }
+
+/* ─── PROFILE DROPDOWN ─── */
+.profile-menu {
+  position: absolute; bottom: 60px; left: 12px; right: 12px;
+  background: #1e293b; border: 1px solid #334155; border-radius: var(--radius-sm);
+  z-index: 200; overflow: hidden; box-shadow: var(--shadow-lg);
+  opacity: 0; pointer-events: none; transform: translateY(8px); transition: .15s;
+}
+.profile-menu.open { opacity: 1; pointer-events: all; transform: translateY(0); }
+.profile-menu-item {
+  padding: 10px 14px; font-size: 13px; color: #94a3b8; cursor: pointer;
+  display: flex; align-items: center; gap: 8px; transition: .1s;
+}
+.profile-menu-item:hover { background: #0f172a; color: #e2e8f0; }
+.profile-menu-item.danger { color: #f87171; }
+.profile-menu-item.danger:hover { background: #450a0a; }
+</style>
+</head>
+<body>
+
+<!-- LOGIN SCREEN -->
+<div id="login-screen">
+  <div class="login-wrap">
+    <div class="login-logo">Synclick<span>CRM</span></div>
+    <div class="login-sub">Gestión Comercial · Iniciá sesión para continuar</div>
+    <div class="login-card">
+      <div id="login-error"></div>
+      <div class="form-group">
+        <label class="form-label">Usuario</label>
+        <input class="form-control" id="login-user" placeholder="Ingresá tu usuario" autocomplete="username" onkeydown="if(event.key==='Enter')document.getElementById('login-pass').focus()">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Contraseña</label>
+        <div class="login-pass-wrap">
+          <input class="form-control" id="login-pass" type="password" placeholder="••••••••" autocomplete="current-password" onkeydown="if(event.key==='Enter')Auth.login()">
+          <button class="login-pass-toggle" onclick="Auth.togglePassword()" id="pass-toggle-btn" tabindex="-1">👁</button>
+        </div>
+      </div>
+      <button class="btn btn-primary w-full" style="margin-top:6px;justify-content:center;padding:11px" onclick="Auth.login()">
+        Ingresar →
+      </button>
+    </div>
+    <div class="login-footer">SynclickCRM v1.0 · Usuario por defecto: <strong style="color:#94a3b8">admin / admin123</strong></div>
+  </div>
+</div>
+
+<!-- SIDEBAR -->
+<nav id="sidebar">
+  <div class="sidebar-logo">Synclick<span>CRM</span></div>
+
+  <div id="sync-badge" onclick="Sync.forceSync()" title="Estado de sincronización">
+    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>
+    <span id="sync-label">Sincronizando…</span>
+  </div>
+
+  <div class="sidebar-section">Principal</div>
+  <a class="nav-item active" data-view="dashboard" href="#dashboard">
+    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+    <span>Dashboard</span>
+  </a>
+  <a class="nav-item" data-view="contacts" href="#contacts">
+    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+    <span>Contactos</span>
+  </a>
+  <a class="nav-item" data-view="campaigns" href="#campaigns">
+    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
+    <span>Campañas</span>
+  </a>
+  <a class="nav-item" data-view="calendar" href="#calendar">
+    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+    <span>Tareas</span>
+  </a>
+
+  <div class="sidebar-section">Sistema</div>
+  <a class="nav-item" data-view="exports" href="#exports">
+    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+    <span>Exportar</span>
+  </a>
+  <a class="nav-item supervisor-only" data-view="import" href="#import">
+    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="3" x2="12" y2="15"/><polyline points="17 8 12 3 7 8"/></svg>
+    <span>Importar</span>
+  </a>
+  <a class="nav-item supervisor-only" data-view="analytics" href="#analytics">
+    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/><line x1="2" y1="20" x2="22" y2="20"/></svg>
+    <span>Métricas</span>
+  </a>
+  <a class="nav-item" data-view="conflicts" href="#conflicts">
+    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+    <span>Conflictos</span>
+  </a>
+  <a class="nav-item admin-only" data-view="users" href="#users">
+    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/><line x1="19" y1="8" x2="23" y2="8"/><line x1="21" y1="6" x2="21" y2="10"/></svg>
+    <span>Usuarios</span>
+  </a>
+  <a class="nav-item admin-only" data-view="settings" href="#settings">
+    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+    <span>Configuración</span>
+  </a>
+
+  <div class="sidebar-bottom" style="position:relative">
+    <div class="profile-menu" id="profile-menu">
+      <div class="profile-menu-item" onclick="Views.showProfile()">
+        <span>👤</span> Mi perfil
+      </div>
+      <div class="profile-menu-item" onclick="Views.showChangePassword()">
+        <span>🔑</span> Cambiar contraseña
+      </div>
+      <div style="height:1px;background:#334155;margin:4px 0"></div>
+      <div class="profile-menu-item danger" onclick="Auth.logout()">
+        <span>↩</span> Cerrar sesión
+      </div>
+    </div>
+    <div class="user-chip" id="user-chip-btn" onclick="Auth.toggleProfileMenu()">
+      <div class="user-avatar" id="nav-avatar">?</div>
+      <div class="user-info">
+        <div class="user-name" id="nav-username">Sin sesión</div>
+        <div class="user-role" id="nav-role">—</div>
+      </div>
+      <svg style="margin-left:auto;flex-shrink:0;color:#64748b" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 12 15 18 9"/></svg>
+    </div>
+  </div>
+</nav>
+
+<!-- MAIN -->
+<div id="main">
+  <div id="topbar">
+    <span id="page-title">Dashboard</span>
+    <div class="topbar-actions" id="topbar-actions"></div>
+  </div>
+  <div id="content"></div>
+</div>
+
+<!-- MODAL -->
+<div id="modal-overlay">
+  <div class="modal" id="modal-box">
+    <div class="modal-header">
+      <span class="modal-title" id="modal-title">Modal</span>
+      <button class="btn btn-ghost btn-icon" onclick="Modal.close()">✕</button>
+    </div>
+    <div class="modal-body" id="modal-body"></div>
+    <div class="modal-footer" id="modal-footer"></div>
+  </div>
+</div>
+
+<!-- TOASTS -->
+<div id="toast-container"></div>
+
+<script>
+// ════════════════════════════════════════════
+// CONFIG
+// ════════════════════════════════════════════
+const CONFIG = {
+  // ⬇ Pegá tu URL de Apps Script aquí para que todos los usuarios la tengan automáticamente
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbwPk2wMRpI1blvbyJBiXYMdqAC4EWyTjl-iUrc_7Rq4tnFaECh03wos7jTZ-_Cu2Fo9/exec' || localStorage.getItem('gas_url') || '',
+  SYNC_INTERVAL: 30000,
+  APP_VERSION: '1.0.0',
+  CURRENT_USER: null, // set by Auth after login
+  SESSION_HOURS: 8,
+};
+
+// ════════════════════════════════════════════
+// AUTH MODULE
+// ════════════════════════════════════════════
+const Auth = (() => {
+
+  // Role permissions map
+  const ROLE_PERMS = {
+    admin:      { users:true, settings:true, deleteContacts:true, campaigns:true, exports:true, conflicts:true, analytics:true, import:true },
+    supervisor: { users:false, settings:false, deleteContacts:true, campaigns:true, exports:true, conflicts:true, analytics:true, import:true },
+    agente:     { users:false, settings:false, deleteContacts:false, campaigns:false, exports:false, conflicts:false, analytics:false, import:false },
+  };
+
+  // Hash password with SHA-256 + salt (using WebCrypto API)
+  async function hashPassword(password, salt) {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(salt + password + 'synclickcrm_2024');
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+  }
+
+  function genSalt() {
+    const arr = new Uint8Array(16);
+    crypto.getRandomValues(arr);
+    return Array.from(arr).map(b => b.toString(16).padStart(2,'0')).join('');
+  }
+
+  async function createUser({ username, name, role, password, active = true }) {
+    const existing = await DB.getAll('users');
+    if (existing.find(u => u.username === username)) throw new Error('El nombre de usuario ya existe');
+    const salt = genSalt();
+    const hash = await hashPassword(password, salt);
+    const user = { id: uid(), username, name, role, salt, hash, active, createdAt: now() };
+    await DB.put('users', user);
+    // Sync hash y salt a Sheets — son necesarios para autenticación remota
+    await Sync.enqueue('upsert', 'users', user.id, user);
+    return user;
+  }
+
+  async function login() {
+    const username = document.getElementById('login-user').value.trim();
+    const password = document.getElementById('login-pass').value;
+    const errEl = document.getElementById('login-error');
+    errEl.style.display = 'none';
+
+    if (!username || !password) {
+      errEl.style.display = 'block'; errEl.textContent = 'Completá usuario y contraseña.'; return;
+    }
+
+    // Si hay GAS_URL configurado, intentar actualizar usuarios desde Sheets
+    if (CONFIG.GAS_URL) {
+      try {
+        const resp = await fetch(CONFIG.GAS_URL + '?action=pull&entity=users');
+        if (resp.ok) {
+          const data = await resp.json();
+          const remoteUsers = data.users || [];
+          for (const u of remoteUsers) {
+            if (u && u.id) await DB.put('users', u);
+          }
+        }
+      } catch(e) { /* offline — usar usuarios locales */ }
+    }
+
+    const users = await DB.getAll('users');
+    const user = users.find(u => u.username === username);
+
+    if (!user) {
+      errEl.style.display = 'block'; errEl.textContent = 'Usuario no encontrado.'; return;
+    }
+    if (!user.active) {
+      errEl.style.display = 'block'; errEl.textContent = 'Tu cuenta está inactiva. Contactá al administrador.'; return;
+    }
+
+    const hash = await hashPassword(password, user.salt);
+    if (hash !== user.hash) {
+      errEl.style.display = 'block'; errEl.textContent = 'Contraseña incorrecta.'; return;
+    }
+
+    // Create session
+    const session = {
+      userId: user.id, username: user.username, name: user.name,
+      role: user.role, loginAt: now(),
+      expiresAt: new Date(Date.now() + CONFIG.SESSION_HOURS * 3600000).toISOString(),
+    };
+    localStorage.setItem('synclick_session', JSON.stringify(session));
+    CONFIG.CURRENT_USER = session;
+    applySession(session);
+
+    // Audit login
+    setTimeout(() => Audit.log('login', 'users', user.id, { username: user.username }).catch(() => {}), 100);
+
+    // Hide login
+    const ls = document.getElementById('login-screen');
+    ls.classList.add('hide');
+    setTimeout(() => ls.style.display = 'none', 400);
+
+    Toast.success(`¡Bienvenido/a, ${user.name}!`);
+    Router.render();
+  }
+
+  function logout() {
+    localStorage.removeItem('synclick_session');
+    CONFIG.CURRENT_USER = null;
+    document.getElementById('login-user').value = '';
+    document.getElementById('login-pass').value = '';
+    document.getElementById('login-error').style.display = 'none';
+    const ls = document.getElementById('login-screen');
+    ls.style.display = 'flex';
+    requestAnimationFrame(() => ls.classList.remove('hide'));
+    closeProfileMenu();
+  }
+
+  function applySession(session) {
+    const roleLabels = { admin:'Administrador', supervisor:'Supervisor', agente:'Agente' };
+    document.getElementById('nav-avatar').textContent = initials(session.name);
+    document.getElementById('nav-username').textContent = session.name;
+    document.getElementById('nav-role').textContent = roleLabels[session.role] || session.role;
+    // Show/hide role-restricted nav items
+    const isAdmin = session.role === 'admin';
+    const isSupervisorOrAdmin = session.role === 'admin' || session.role === 'supervisor';
+    document.querySelectorAll('.admin-only').forEach(el => {
+      el.style.display = isAdmin ? '' : 'none';
+    });
+    document.querySelectorAll('.supervisor-only').forEach(el => {
+      el.style.display = isSupervisorOrAdmin ? '' : 'none';
+    });
+  }
+
+  function checkSession() {
+    const raw = localStorage.getItem('synclick_session');
+    if (!raw) return false;
+    try {
+      const session = JSON.parse(raw);
+      if (new Date(session.expiresAt) < new Date()) { localStorage.removeItem('synclick_session'); return false; }
+      CONFIG.CURRENT_USER = session;
+      applySession(session);
+      return true;
+    } catch { return false; }
+  }
+
+  function can(perm) {
+    const role = CONFIG.CURRENT_USER?.role || 'agente';
+    return ROLE_PERMS[role]?.[perm] ?? false;
+  }
+
+  function togglePassword() {
+    const input = document.getElementById('login-pass');
+    const btn = document.getElementById('pass-toggle-btn');
+    const show = input.type === 'password';
+    input.type = show ? 'text' : 'password';
+    btn.textContent = show ? '🙈' : '👁';
+  }
+
+  function toggleProfileMenu() {
+    document.getElementById('profile-menu').classList.toggle('open');
+  }
+  function closeProfileMenu() {
+    document.getElementById('profile-menu').classList.remove('open');
+  }
+
+  // Close menu on outside click
+  document.addEventListener('click', e => {
+    if (!document.getElementById('user-chip-btn')?.contains(e.target)) closeProfileMenu();
+  });
+
+  return { login, logout, createUser, hashPassword, genSalt, checkSession, can, togglePassword, toggleProfileMenu, closeProfileMenu };
+})();
+
+// ════════════════════════════════════════════
+// UTILS
+// ════════════════════════════════════════════
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,7);
+const now = () => new Date().toISOString();
+const fmtDate = d => d ? new Date(d).toLocaleDateString('es-AR', {day:'2-digit',month:'2-digit',year:'numeric'}) : '—';
+const fmtDatetime = d => d ? new Date(d).toLocaleString('es-AR', {day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'}) : '—';
+const initials = (n='') => n.split(' ').slice(0,2).map(w=>w[0]||'').join('').toUpperCase() || '?';
+const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
+const STATUS_LABELS = { prospecto:'Prospecto', cliente:'Cliente', inactivo:'Inactivo', otro:'Otro' };
+const GESTION_TYPES = ['Llamada','Notificación','Campaña','Reunión','Visita','Tarea','Nota','Cambio de estado'];
+const TASK_STATES = ['pendiente','en_curso','completada','cancelada'];
+
+// ════════════════════════════════════════════
+// IndexedDB
+// ════════════════════════════════════════════
+const DB = (() => {
+  let db;
+  const STORES = {
+    contacts: 'id,status,updatedAt,createdAt',
+    gestiones: 'id,contactId,createdAt',
+    tasks: 'id,contactId,assignedTo,status,dueDate',
+    campaigns: 'id,createdAt',
+    campaign_contacts: 'id,campaignId,contactId',
+    tags: 'id,name',
+    users: 'id,name',
+    sync_queue: 'id,entity,entityId,action,ts',
+    conflicts: 'id,entity,entityId,ts',
+    audit_log: 'id,ts,action,entity,userId',
+    notas: 'id,contactId,createdAt',
+  };
+
+  function open() {
+    return new Promise((res, rej) => {
+      const req = indexedDB.open('synclickcrm_v2', 2);
+      req.onupgradeneeded = e => {
+        const d = e.target.result;
+        // Create all stores that don't exist yet (handles both fresh installs and upgrades)
+        Object.keys(STORES).forEach(name => {
+          if (!d.objectStoreNames.contains(name)) {
+            d.createObjectStore(name, { keyPath: 'id' });
+          }
+        });
+      };
+      req.onsuccess = e => {
+        db = e.target.result;
+        // If another tab upgrades the DB, reload to get the new version
+        db.onversionchange = () => { db.close(); location.reload(); };
+        res(db);
+      };
+      req.onerror = e => rej(e.target.error);
+      // Another tab has the DB open - ask it to close
+      req.onblocked = () => {
+        console.warn('SynclickCRM: DB upgrade blocked — close other tabs and reload');
+      };
+    });
+  }
+
+  async function ensure() { if (!db) await open(); return db; }
+
+  async function getAll(store) {
+    await ensure();
+    return new Promise((res, rej) => {
+      try {
+        const tx = db.transaction(store, 'readonly');
+        const req = tx.objectStore(store).getAll();
+        req.onsuccess = () => res(req.result);
+        req.onerror = e => rej(e.target.error);
+      } catch(e) {
+        // Store might not exist yet (e.g. mid-upgrade), return empty array
+        res([]);
+      }
+    });
+  }
+
+  async function get(store, id) {
+    await ensure();
+    return new Promise((res, rej) => {
+      try {
+        const tx = db.transaction(store, 'readonly');
+        const req = tx.objectStore(store).get(id);
+        req.onsuccess = () => res(req.result);
+        req.onerror = e => rej(e.target.error);
+      } catch(e) { res(undefined); }
+    });
+  }
+
+  async function put(store, data) {
+    await ensure();
+    return new Promise((res, rej) => {
+      try {
+        const tx = db.transaction(store, 'readwrite');
+        const req = tx.objectStore(store).put(data);
+        req.onsuccess = () => res(data);
+        req.onerror = e => rej(e.target.error);
+      } catch(e) { rej(e); }
+    });
+  }
+
+  async function del(store, id) {
+    await ensure();
+    return new Promise((res, rej) => {
+      const tx = db.transaction(store, 'readwrite');
+      const req = tx.objectStore(store).delete(id);
+      req.onsuccess = () => res();
+      req.onerror = e => rej(e.target.error);
+    });
+  }
+
+  async function putMany(store, items) {
+    await ensure();
+    return new Promise((res, rej) => {
+      const tx = db.transaction(store, 'readwrite');
+      const s = tx.objectStore(store);
+      items.forEach(item => s.put(item));
+      tx.oncomplete = () => res();
+      tx.onerror = e => rej(e.target.error);
+    });
+  }
+
+  return { open, get, getAll, put, del, putMany };
+})();
+
+// ════════════════════════════════════════════
+// SYNC ENGINE
+// ════════════════════════════════════════════
+const Sync = (() => {
+  let online = navigator.onLine;
+  let syncing = false;
+  let queueCount = 0;
+
+  function updateBadge() {
+    const badge = document.getElementById('sync-badge');
+    const label = document.getElementById('sync-label');
+    if (!badge) return;
+    badge.className = '';
+    if (!online) { badge.classList.add('offline'); label.textContent = 'Sin conexión'; return; }
+    if (syncing) { badge.classList.add('syncing'); label.innerHTML='<span class="pulse">Sincronizando…</span>'; return; }
+    if (queueCount > 0) { badge.classList.add('pending'); label.textContent = `${queueCount} pendiente${queueCount>1?'s':''}`; return; }
+    badge.classList.add('online'); label.textContent = 'Sincronizado ✓';
+  }
+
+  async function enqueue(action, entity, entityId, data) {
+    const item = {
+      id: uid(), action, entity, entityId, data,
+      ts: now(),
+      userId: CONFIG.CURRENT_USER?.userId || 'anon',
+      userRole: CONFIG.CURRENT_USER?.role || 'agente',
+    };
+    await DB.put('sync_queue', item);
+    queueCount++;
+    updateBadge();
+    if (online) scheduleSync();
+  }
+
+  let syncTimer;
+  function scheduleSync() { clearTimeout(syncTimer); syncTimer = setTimeout(processQueue, 1500); }
+
+  // Envío a GAS con no-cors — la respuesta es "opaca" (status=0, ok=false)
+  // pero los datos SÍ llegan al servidor. Tratamos status=0 como éxito.
+  async function sendToGAS(item) {
+    const resp = await fetch(CONFIG.GAS_URL, {
+      method: 'POST',
+      mode: 'no-cors',
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify(item),
+    });
+    // Con no-cors: resp.status === 0, resp.type === 'opaque' → éxito
+    // Con cors normal: resp.status === 200 → éxito
+    return { ok: resp.status === 0 || resp.ok, opaque: resp.type === 'opaque' };
+  }
+
+  async function processQueue() {
+    if (!online || syncing || !CONFIG.GAS_URL) return;
+    const queue = await DB.getAll('sync_queue');
+    if (!queue.length) { queueCount = 0; updateBadge(); return; }
+    syncing = true; updateBadge();
+    let processed = 0;
+
+    for (const item of queue) {
+      try {
+        const result = await sendToGAS(item);
+        if (result.ok) {
+          await DB.del('sync_queue', item.id);
+          processed++;
+        }
+      } catch (e) {
+        console.warn('[Sync] Error:', e.message, 'entity:', item.entity);
+      }
+    }
+
+    queueCount = Math.max(0, queue.length - processed);
+    syncing = false; updateBadge();
+  }
+
+  // JSONP para GET requests — bypasea CORS sin necesitar headers especiales
+  function fetchJSONP(url) {
+    return new Promise((resolve, reject) => {
+      const cbName = '__synclick_cb_' + Date.now();
+      const script = document.createElement('script');
+      const timeout = setTimeout(() => {
+        cleanup();
+        reject(new Error('JSONP timeout'));
+      }, 15000);
+
+      function cleanup() {
+        clearTimeout(timeout);
+        delete window[cbName];
+        if (script.parentNode) script.parentNode.removeChild(script);
+      }
+
+      window[cbName] = (data) => {
+        cleanup();
+        resolve(data);
+      };
+
+      script.src = url + (url.includes('?') ? '&' : '?') + 'callback=' + cbName;
+      script.onerror = () => { cleanup(); reject(new Error('JSONP load error')); };
+      document.head.appendChild(script);
+    });
+  }
+
+  async function pullFromServer() {
+    if (!online || !CONFIG.GAS_URL) return;
+    try {
+      const since = encodeURIComponent(localStorage.getItem('synclick_last_pull') || '');
+      const data = await fetchJSONP(CONFIG.GAS_URL + '?action=pull&since=' + since);
+      if (!data || data.error) { console.warn('Pull error:', data?.error); return; }
+      let imported = 0;
+      for (const [store, rows] of Object.entries(data)) {
+        if (Array.isArray(rows) && rows.length) {
+          await DB.putMany(store, rows).catch(() => {});
+          imported += rows.length;
+        }
+      }
+      localStorage.setItem('synclick_last_pull', new Date().toISOString());
+      if (imported > 0) {
+        Router.render();
+        Toast.success(`${imported} registros sincronizados`);
+      }
+    } catch(e) { console.warn('Pull failed:', e.message); }
+  }
+
+  // Prueba de sincronización — muestra resultado detallado
+  async function debugSync() {
+    if (!CONFIG.GAS_URL) return { error: 'Sin URL configurada' };
+    const testItem = {
+      id: 'debug-test-' + Date.now(),
+      action: 'upsert', entity: 'tags',
+      entityId: 'debug-tag-001',
+      data: { id: 'debug-tag-001', name: 'TEST_SYNC_' + Date.now() },
+      ts: new Date().toISOString(),
+      userId: CONFIG.CURRENT_USER?.userId || 'debug',
+      userRole: CONFIG.CURRENT_USER?.role || 'admin',
+    };
+
+    const results = {};
+
+    // Test 1: POST no-cors (write)
+    try {
+      const resp = await fetch(CONFIG.GAS_URL, {
+        method: 'POST', mode: 'no-cors',
+        headers: { 'Content-Type': 'text/plain' },
+        body: JSON.stringify(testItem),
+      });
+      results['POST no-cors (escritura)'] = {
+        ok: resp.status === 0 || resp.ok,
+        detail: `type=${resp.type} status=${resp.status} — ${resp.type==='opaque' ? '✅ Respuesta opaca = datos enviados correctamente' : resp.ok ? '✅ OK' : '❌ Falló'}`
+      };
+    } catch(e) { results['POST no-cors (escritura)'] = { ok: false, detail: '❌ ' + e.message }; }
+
+    // Test 2: JSONP ping (read)
+    try {
+      const data = await fetchJSONP(CONFIG.GAS_URL + '?action=ping');
+      results['JSONP GET (lectura)'] = {
+        ok: !!data?.ok,
+        detail: data?.ok ? '✅ ' + JSON.stringify(data) : '❌ Respuesta: ' + JSON.stringify(data)
+      };
+    } catch(e) { results['JSONP GET (lectura)'] = { ok: false, detail: '❌ ' + e.message }; }
+
+    return results;
+  }
+
+  async function pullFromServer() {
+    if (!online || !CONFIG.GAS_URL) return;
+    try {
+      const url = CONFIG.GAS_URL + '?action=pull&since=' + encodeURIComponent(localStorage.getItem('last_pull')||'');
+      const resp = await fetch(url, { method: 'GET', redirect: 'follow' });
+      if (!resp.ok) return;
+      const data = await resp.json();
+      if (data.error) { console.warn('Pull error:', data.error); return; }
+      let imported = 0;
+      for (const [store, rows] of Object.entries(data)) {
+        if (Array.isArray(rows) && rows.length) {
+          await DB.putMany(store, rows).catch(() => {});
+          imported += rows.length;
+        }
+      }
+      localStorage.setItem('last_pull', now());
+      if (imported > 0) {
+        Router.render();
+        Toast.success(`${imported} registros sincronizados`);
+      }
+    } catch(e) { console.warn('Pull failed:', e.message); }
+  }
+
+  // Empuja TODOS los datos locales al servidor (útil en primera conexión)
+  async function pushAllLocalData() {
+    if (!online || !CONFIG.GAS_URL) return 0;
+    const entities = ['contacts','gestiones','tasks','campaigns','tags','notas','users'];
+    let total = 0;
+    for (const entity of entities) {
+      try {
+        const rows = await DB.getAll(entity);
+        for (const row of rows) {
+          // Para usuarios enviamos el objeto completo (con hash/salt) para que funcione la auth
+          await DB.put('sync_queue', {
+            id: uid(), action: 'upsert', entity,
+            entityId: row.id, data: row,
+            ts: now(), userId: CONFIG.CURRENT_USER?.id || 'anon'
+          });
+          total++;
+        }
+      } catch(e) {}
+    }
+    queueCount = (await DB.getAll('sync_queue')).length;
+    updateBadge();
+    await processQueue();
+    return total;
+  }
+
+  async function forceSync() {
+    await pullFromServer();
+    await processQueue();
+    updateBadge();
+    Router.render();
+  }
+
+  // Listen to network
+  window.addEventListener('online', () => { online = true; updateBadge(); processQueue(); });
+  window.addEventListener('offline', () => { online = false; updateBadge(); });
+
+  // Periodic sync
+  setInterval(processQueue, CONFIG.SYNC_INTERVAL);
+  setInterval(async () => { if (online) await pullFromServer(); }, CONFIG.SYNC_INTERVAL * 2);
+
+  async function init() {
+    const queue = await DB.getAll('sync_queue');
+    queueCount = queue.length;
+    updateBadge();
+    if (online) { await pullFromServer(); await processQueue(); }
+  }
+
+  return { enqueue, forceSync, pushAllLocalData, debugSync, init, get isOnline() { return online; } };
+})();
+
+// ════════════════════════════════════════════
+// TOAST
+// ════════════════════════════════════════════
+const Toast = {
+  show(msg, type='info', ms=3000) {
+    const c = document.getElementById('toast-container');
+    const t = document.createElement('div');
+    t.className = `toast toast-${type}`; t.textContent = msg;
+    c.appendChild(t);
+    setTimeout(() => t.remove(), ms);
+  },
+  success: (m) => Toast.show(m,'success'),
+  error: (m) => Toast.show(m,'error',5000),
+  warning: (m) => Toast.show(m,'warning',4000),
+  info: (m) => Toast.show(m,'info'),
+};
+
+// ════════════════════════════════════════════
+// MODAL
+// ════════════════════════════════════════════
+const Modal = {
+  open(title, bodyHTML, footerHTML='') {
+    document.getElementById('modal-title').textContent = title;
+    document.getElementById('modal-body').innerHTML = bodyHTML;
+    document.getElementById('modal-footer').innerHTML = footerHTML;
+    document.getElementById('modal-overlay').classList.add('open');
+  },
+  close() {
+    document.getElementById('modal-overlay').classList.remove('open');
+  }
+};
+document.getElementById('modal-overlay').addEventListener('click', e => { if (e.target.id === 'modal-overlay') Modal.close(); });
+
+// ════════════════════════════════════════════
+// AUDIT LOG
+// ════════════════════════════════════════════
+const Audit = {
+  ICONS: {
+    create: '➕', update: '✏️', delete: '🗑️',
+    campaign_exec: '📢', campaign_create: '📋',
+    import: '📥', login: '🔑', logout: '🚪',
+    status_change: '🔄',
+  },
+
+  async log(action, entity, entityId, detail = {}) {
+    const user = CONFIG.CURRENT_USER;
+    const entry = {
+      id: uid(),
+      ts: now(),
+      action,
+      entity,
+      entityId: entityId || '',
+      detail: JSON.stringify(detail),
+      userId: user?.userId || 'anon',
+      userName: user?.name || 'Sistema',
+      userRole: user?.role || '',
+    };
+    await DB.put('audit_log', entry);
+    // Sync to GAS (non-blocking)
+    Sync.enqueue('upsert', 'auditoria', entry.id, entry).catch(() => {});
+    return entry;
+  },
+
+  async getAll({ days = 30, userId = '', action = '' } = {}) {
+    const since = new Date(Date.now() - days * 86400000).toISOString();
+    let entries = await DB.getAll('audit_log');
+    entries = entries.filter(e => e.ts >= since);
+    if (userId) entries = entries.filter(e => e.userId === userId);
+    if (action) entries = entries.filter(e => e.action === action);
+    return entries.sort((a, b) => b.ts.localeCompare(a.ts));
+  },
+
+  async getStats(days = 30) {
+    const all = await Audit.getAll({ days });
+    const users = await DB.getAll('users');
+    const userMap = Object.fromEntries(users.map(u => [u.id, u]));
+
+    // By action
+    const byAction = {};
+    all.forEach(e => { byAction[e.action] = (byAction[e.action] || 0) + 1; });
+
+    // By agent
+    const byAgent = {};
+    all.forEach(e => {
+      if (!byAgent[e.userId]) byAgent[e.userId] = { userId: e.userId, name: e.userName, count: 0, creates: 0, updates: 0, deletes: 0, campaigns: 0, imports: 0 };
+      byAgent[e.userId].count++;
+      if (e.action === 'create') byAgent[e.userId].creates++;
+      if (e.action === 'update') byAgent[e.userId].updates++;
+      if (e.action === 'delete') byAgent[e.userId].deletes++;
+      if (e.action.startsWith('campaign')) byAgent[e.userId].campaigns++;
+      if (e.action === 'import') byAgent[e.userId].imports++;
+    });
+
+    // By day (last N days)
+    const byDay = {};
+    const todayStr = new Date().toISOString().split('T')[0];
+    for (let i = 0; i < Math.min(days, 30); i++) {
+      const d = new Date(Date.now() - i * 86400000).toISOString().split('T')[0];
+      byDay[d] = 0;
+    }
+    all.forEach(e => {
+      const d = e.ts.split('T')[0];
+      if (byDay[d] !== undefined) byDay[d]++;
+    });
+
+    // Campaign stats
+    const campaigns = await DB.getAll('campaigns');
+    const contacts = await DB.getAll('contacts');
+    const campStats = campaigns.map(c => ({
+      ...c,
+      contactCount: contacts.filter(x => (x.campaigns || []).includes(c.id)).length,
+      executions: all.filter(e => e.action === 'campaign_exec' && e.entityId === c.id).length,
+    }));
+
+    return {
+      total: all.length,
+      byAction,
+      byAgent: Object.values(byAgent).sort((a, b) => b.count - a.count),
+      byDay,
+      campStats,
+      allEntries: all,
+    };
+  },
+};
+
+// ════════════════════════════════════════════
+// DATA HELPERS
+// ════════════════════════════════════════════
+const Data = {
+  async saveContact(contact) {
+    const isNew = !contact.id;
+    contact.id = contact.id || uid();
+    contact.updatedAt = now();
+    contact.createdAt = contact.createdAt || now();
+    contact.updatedBy = CONFIG.CURRENT_USER?.userId || 'anon';
+    await DB.put('contacts', contact);
+    await Sync.enqueue('upsert', 'contacts', contact.id, contact);
+    Audit.log(isNew ? 'create' : 'update', 'contacts', contact.id, { nombre: contact.nombre, apellido: contact.apellido, status: contact.status }).catch(() => {});
+    return contact;
+  },
+  async deleteContact(id) {
+    const c = await DB.get('contacts', id);
+    await DB.del('contacts', id);
+    await Sync.enqueue('delete', 'contacts', id, { id });
+    Audit.log('delete', 'contacts', id, { nombre: c?.nombre, apellido: c?.apellido }).catch(() => {});
+  },
+  async getContacts() { return DB.getAll('contacts'); },
+  async getContact(id) { return DB.get('contacts', id); },
+
+  async saveGestion(g) {
+    g.id = g.id || uid();
+    g.createdAt = g.createdAt || now();
+    g.userId = g.userId || CONFIG.CURRENT_USER?.userId || 'anon';
+    g.userName = g.userName || CONFIG.CURRENT_USER?.name || 'Anón';
+    await DB.put('gestiones', g);
+    await Sync.enqueue('upsert', 'gestiones', g.id, g);
+    Audit.log('create', 'gestiones', g.id, { contactId: g.contactId, tipo: g.tipo }).catch(() => {});
+    return g;
+  },
+  async getGestiones(contactId) {
+    const all = await DB.getAll('gestiones');
+    return all.filter(g => g.contactId === contactId).sort((a,b) => b.createdAt.localeCompare(a.createdAt));
+  },
+
+  async saveNota(nota) {
+    nota.id = nota.id || uid();
+    nota.createdAt = nota.createdAt || now();
+    nota.userId = CONFIG.CURRENT_USER?.userId || 'anon';
+    nota.userName = CONFIG.CURRENT_USER?.name || 'Anón';
+    nota.userRole = CONFIG.CURRENT_USER?.role || 'agente';
+    await DB.put('notas', nota);
+    await Sync.enqueue('upsert', 'notas', nota.id, nota);
+    Audit.log('create', 'notas', nota.id, { contactId: nota.contactId, obs: nota.observacion?.slice(0,60) }).catch(() => {});
+    return nota;
+  },
+
+  async getNotas(contactId) {
+    const all = await DB.getAll('notas');
+    return all.filter(n => n.contactId === contactId).sort((a,b) => b.createdAt.localeCompare(a.createdAt));
+  },
+
+  async deleteNota(id) {
+    const n = await DB.get('notas', id);
+    await DB.del('notas', id);
+    await Sync.enqueue('delete', 'notas', id, { id });
+    Audit.log('delete', 'notas', id, { obs: n?.observacion?.slice(0,60) }).catch(() => {});
+  },
+
+  async saveTask(t) {
+    const isNew = !t.id;
+    t.id = t.id || uid();
+    t.createdAt = t.createdAt || now();
+    t.createdBy = t.createdBy || CONFIG.CURRENT_USER?.userId || 'anon';
+    await DB.put('tasks', t);
+    await Sync.enqueue('upsert', 'tasks', t.id, t);
+    if (isNew) Audit.log('create', 'tasks', t.id, { title: t.title, assignedTo: t.assignedTo, dueDate: t.dueDate }).catch(() => {});
+    else Audit.log('update', 'tasks', t.id, { title: t.title, status: t.status }).catch(() => {});
+    return t;
+  },
+  async getTasks(filter={}) {
+    let all = await DB.getAll('tasks');
+    if (filter.contactId) all = all.filter(t=>t.contactId===filter.contactId);
+    if (filter.assignedTo) all = all.filter(t=>t.assignedTo===filter.assignedTo);
+    if (filter.status) all = all.filter(t=>t.status===filter.status);
+    return all.sort((a,b) => (a.dueDate||'').localeCompare(b.dueDate||''));
+  },
+
+  async saveCampaign(c) {
+    const isNew = !c.id;
+    c.id = c.id || uid();
+    c.createdAt = c.createdAt || now();
+    c.createdBy = c.createdBy || CONFIG.CURRENT_USER?.userId || 'anon';
+    await DB.put('campaigns', c);
+    await Sync.enqueue('upsert', 'campaigns', c.id, c);
+    Audit.log(isNew ? 'campaign_create' : 'update', 'campaigns', c.id, { name: c.name, status: c.status }).catch(() => {});
+    return c;
+  },
+  async getCampaigns() { return DB.getAll('campaigns'); },
+
+  async getTags() { return DB.getAll('tags'); },
+  async saveTag(tag) {
+    tag.id = tag.id || uid();
+    await DB.put('tags', tag);
+    await Sync.enqueue('upsert', 'tags', tag.id, tag);
+    return tag;
+  },
+
+  async getUsers() { return DB.getAll('users'); },
+  async saveUser(u) {
+    u.id = u.id || uid();
+    await DB.put('users', u);
+    return u;
+  },
+
+  async getConflicts() { return DB.getAll('conflicts'); },
+  async resolveConflict(id, choice) {
+    const c = await DB.get('conflicts', id);
+    if (!c) return;
+    const data = choice === 'local' ? c.local : c.remote;
+    await DB.put(c.entity, data);
+    await DB.del('conflicts', id);
+    if (choice === 'local') await Sync.enqueue('upsert', c.entity, c.entityId, data);
+    Toast.success('Conflicto resuelto');
+  },
+
+  // Stats
+  async getStats() {
+    const contacts = await DB.getAll('contacts');
+    const tasks = await DB.getAll('tasks');
+    const queue = await DB.getAll('sync_queue');
+    return {
+      total: contacts.length,
+      prospectos: contacts.filter(c=>c.status==='prospecto').length,
+      clientes: contacts.filter(c=>c.status==='cliente').length,
+      tareas_hoy: tasks.filter(t=>{
+        const d = t.dueDate?.split('T')[0];
+        return d === new Date().toISOString().split('T')[0] && t.status !== 'completada';
+      }).length,
+      pending_sync: queue.length,
+    };
+  }
+};
+
+// ════════════════════════════════════════════
+// EXPORT
+// ════════════════════════════════════════════
+const Export = {
+  toCSV(data, filename) {
+    if (!data.length) return Toast.warning('No hay datos para exportar');
+    const keys = Object.keys(data[0]);
+    const rows = [keys.join(','), ...data.map(r => keys.map(k => JSON.stringify(r[k]??'')).join(','))];
+    const blob = new Blob([rows.join('\n')], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = filename + '.csv'; a.click();
+    URL.revokeObjectURL(url);
+  },
+  toJSON(data, filename) {
+    const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = filename + '.json'; a.click();
+    URL.revokeObjectURL(url);
+  }
+};
+
+// ════════════════════════════════════════════
+// CSV IMPORT ENGINE
+// ════════════════════════════════════════════
+const Importer = {
+  // Parse raw CSV text into array of objects
+  parseCSV(text) {
+    const lines = text.trim().split(/\r?\n/);
+    if (lines.length < 2) throw new Error('El archivo debe tener al menos una fila de encabezados y una de datos');
+    const sep = text.includes(';') ? ';' : ',';
+
+    const parseRow = line => {
+      const cells = [];
+      let cur = '', inQ = false;
+      for (let i = 0; i < line.length; i++) {
+        const ch = line[i];
+        if (ch === '"') { inQ = !inQ; continue; }
+        if (ch === sep && !inQ) { cells.push(cur.trim()); cur = ''; continue; }
+        cur += ch;
+      }
+      cells.push(cur.trim());
+      return cells;
+    };
+
+    const headers = parseRow(lines[0]).map(h => h.replace(/"/g, '').trim());
+    const rows = lines.slice(1).filter(l => l.trim()).map(l => {
+      const cells = parseRow(l);
+      const obj = {};
+      headers.forEach((h, i) => { obj[h] = cells[i] || ''; });
+      return obj;
+    });
+    return { headers, rows };
+  },
+
+  // Map from CSV headers to contact fields
+  CONTACT_FIELDS: [
+    { key: 'nombre', label: 'Nombre', required: true },
+    { key: 'apellido', label: 'Apellido' },
+    { key: 'razon_social', label: 'Razón social' },
+    { key: 'email', label: 'Email' },
+    { key: 'telefono', label: 'Teléfono' },
+    { key: 'cuit', label: 'CUIT' },
+    { key: 'dni', label: 'DNI' },
+    { key: 'ciudad', label: 'Ciudad' },
+    { key: 'direccion', label: 'Dirección' },
+    { key: 'status', label: 'Estado (prospecto/cliente/inactivo)' },
+    { key: 'condicion', label: 'Condición impositiva' },
+    { key: 'observaciones', label: 'Observaciones' },
+    { key: 'tags', label: 'Etiquetas (separadas por |)' },
+    { key: '_skip', label: '— Ignorar columna —' },
+  ],
+
+  // Auto-detect mapping based on header names
+  autoMap(headers) {
+    const normalize = s => s.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const aliases = {
+      nombre: ['nombre', 'name', 'firstname', 'first_name', 'primer_nombre'],
+      apellido: ['apellido', 'lastname', 'last_name', 'surname', 'segundo_nombre'],
+      razon_social: ['razonsocial', 'empresa', 'company', 'business', 'razon'],
+      email: ['email', 'correo', 'mail', 'email1', 'correoelectronico'],
+      telefono: ['telefono', 'phone', 'tel', 'celular', 'movil', 'mobile', 'whatsapp'],
+      cuit: ['cuit', 'taxid', 'ruc'],
+      dni: ['dni', 'documento', 'cedula', 'id'],
+      ciudad: ['ciudad', 'city', 'localidad', 'zona'],
+      direccion: ['direccion', 'address', 'domicilio', 'calle'],
+      status: ['estado', 'status', 'tipo'],
+      condicion: ['condicion', 'condition', 'impositiva'],
+      observaciones: ['obs', 'observaciones', 'notes', 'notas', 'comentarios'],
+      tags: ['tags', 'etiquetas', 'labels', 'categorias'],
+    };
+    const map = {};
+    headers.forEach(h => {
+      const norm = normalize(h);
+      let matched = '_skip';
+      for (const [field, alts] of Object.entries(aliases)) {
+        if (alts.some(a => norm.includes(a) || a.includes(norm))) { matched = field; break; }
+      }
+      map[h] = matched;
+    });
+    return map;
+  },
+
+  // Validate and transform a row using mapping
+  transformRow(row, mapping) {
+    const contact = { status: 'prospecto', tags: [] };
+    const warnings = [];
+    for (const [csvCol, field] of Object.entries(mapping)) {
+      if (field === '_skip') continue;
+      const val = String(row[csvCol] || '').trim();
+      if (!val) continue;
+      if (field === 'tags') {
+        contact.tags = val.split(/[|,;]/).map(t => t.trim()).filter(Boolean);
+      } else if (field === 'status') {
+        const s = val.toLowerCase();
+        if (['prospecto','cliente','inactivo','otro'].includes(s)) contact.status = s;
+        else { contact.status = 'prospecto'; warnings.push(`Estado "${val}" desconocido, se usó "prospecto"`); }
+      } else {
+        contact[field] = val;
+      }
+    }
+    if (!contact.nombre) warnings.push('Sin nombre — fila ignorada');
+    return { contact, warnings, valid: !!contact.nombre };
+  },
+
+  async importBatch(rows, mapping, onProgress) {
+    let ok = 0, skipped = 0, errors = 0;
+    const total = rows.length;
+    for (let i = 0; i < rows.length; i++) {
+      const { contact, valid } = Importer.transformRow(rows[i], mapping);
+      if (valid) {
+        try {
+          await Data.saveContact(contact);
+          ok++;
+        } catch { errors++; }
+      } else { skipped++; }
+      if (onProgress) onProgress(i + 1, total, ok, skipped, errors);
+      // Yield to browser every 50 rows
+      if (i % 50 === 0) await new Promise(r => setTimeout(r, 0));
+    }
+    await Audit.log('import', 'contacts', '', { total, ok, skipped, errors });
+    return { ok, skipped, errors };
+  },
+};
+
+// ════════════════════════════════════════════
+// VIEWS
+// ════════════════════════════════════════════
+const Views = {
+
+  // ── USER PROFILE MODAL ──
+  showProfile() {
+    Auth.closeProfileMenu();
+    const u = CONFIG.CURRENT_USER;
+    const roleLabel = { admin:'Administrador', supervisor:'Supervisor', agente:'Agente' };
+    Modal.open('Mi perfil', `
+      <div style="display:flex;align-items:center;gap:16px;margin-bottom:20px">
+        <div class="user-avatar" style="width:56px;height:56px;font-size:20px;font-family:var(--font-head)">${initials(u.name)}</div>
+        <div>
+          <div style="font-weight:700;font-size:17px">${esc(u.name)}</div>
+          <div class="text-muted text-sm">@${esc(u.username)}</div>
+          <span class="badge badge-${u.role}" style="margin-top:4px;display:inline-flex">${roleLabel[u.role]||u.role}</span>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Nombre completo</label>
+        <input class="form-control" id="prof-name" value="${esc(u.name)}">
+      </div>
+      <div style="background:var(--bg);border-radius:var(--radius-sm);padding:12px;font-size:12.5px;color:var(--text-2)">
+        <div style="margin-bottom:4px">Para cambiar tu contraseña usá la opción del menú de perfil.</div>
+        <div>Sesión expira: ${new Date(u.expiresAt).toLocaleString('es-AR')}</div>
+      </div>
+    `, `
+      <button class="btn btn-secondary" onclick="Modal.close()">Cancelar</button>
+      <button class="btn btn-primary" onclick="Views.saveProfile()">Guardar</button>
+    `);
+  },
+
+  async saveProfile() {
+    const name = document.getElementById('prof-name').value.trim();
+    if (!name) return Toast.error('El nombre no puede estar vacío');
+    const u = await DB.get('users', CONFIG.CURRENT_USER.userId);
+    if (u) { u.name = name; await DB.put('users', u); await Sync.enqueue('upsert','users',u.id,{...u,hash:'[P]',salt:'[P]'}); }
+    CONFIG.CURRENT_USER.name = name;
+    const session = JSON.parse(localStorage.getItem('synclick_session'));
+    session.name = name;
+    localStorage.setItem('synclick_session', JSON.stringify(session));
+    document.getElementById('nav-avatar').textContent = initials(name);
+    document.getElementById('nav-username').textContent = name;
+    Modal.close(); Toast.success('Perfil actualizado');
+  },
+
+  // ── CHANGE PASSWORD ──
+  showChangePassword(targetUserId) {
+    Auth.closeProfileMenu();
+    const isSelf = !targetUserId;
+    Modal.open('Cambiar contraseña', `
+      ${isSelf ? `<div class="form-group"><label class="form-label">Contraseña actual</label><input class="form-control" id="cp-current" type="password" placeholder="Tu contraseña actual"></div>` : ''}
+      <div class="form-group"><label class="form-label">Nueva contraseña</label><input class="form-control" id="cp-new" type="password" placeholder="Mínimo 6 caracteres"></div>
+      <div class="form-group"><label class="form-label">Confirmar nueva contraseña</label><input class="form-control" id="cp-confirm" type="password" placeholder="Repetí la contraseña"></div>
+      <div style="background:var(--bg);border-radius:var(--radius-sm);padding:10px 12px;font-size:12.5px;color:var(--text-2)">
+        Usá al menos 6 caracteres. Combinar letras, números y símbolos mejora la seguridad.
+      </div>
+    `, `
+      <button class="btn btn-secondary" onclick="Modal.close()">Cancelar</button>
+      <button class="btn btn-primary" onclick="Views.saveNewPassword('${targetUserId||''}')">Cambiar contraseña</button>
+    `);
+  },
+
+  async saveNewPassword(targetUserId) {
+    const isSelf = !targetUserId;
+    const newPass = document.getElementById('cp-new').value;
+    const confirm = document.getElementById('cp-confirm').value;
+    if (newPass.length < 6) return Toast.error('La contraseña debe tener al menos 6 caracteres');
+    if (newPass !== confirm) return Toast.error('Las contraseñas no coinciden');
+
+    const userId = targetUserId || CONFIG.CURRENT_USER.userId;
+    const user = await DB.get('users', userId);
+    if (!user) return Toast.error('Usuario no encontrado');
+
+    if (isSelf) {
+      const currentPass = document.getElementById('cp-current').value;
+      const hash = await Auth.hashPassword(currentPass, user.salt);
+      if (hash !== user.hash) return Toast.error('La contraseña actual es incorrecta');
+    }
+
+    const salt = Auth.genSalt();
+    const hash = await Auth.hashPassword(newPass, salt);
+    user.salt = salt; user.hash = hash; user.updatedAt = now();
+    await DB.put('users', user);
+    Modal.close(); Toast.success('Contraseña actualizada');
+  },
+
+  // ── USERS MANAGEMENT (admin only) ──
+  async users() {
+    if (!Auth.can('users')) { Toast.error('Acceso restringido'); Router.go('dashboard'); return; }
+    document.getElementById('page-title').textContent = 'Gestión de Usuarios';
+    document.getElementById('topbar-actions').innerHTML = `<button class="btn btn-primary" onclick="Views.showNewUserModal()">+ Nuevo usuario</button>`;
+
+    const users = await DB.getAll('users');
+    const roleLabel = { admin:'Administrador', supervisor:'Supervisor', agente:'Agente' };
+    const roleColor = { admin:'badge-admin', supervisor:'badge-supervisor', agente:'badge-agente' };
+
+    document.getElementById('content').innerHTML = `
+      <div class="card" style="margin-bottom:16px">
+        <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px">
+          ${[
+            { label:'Total', val: users.length, icon:'👥' },
+            { label:'Activos', val: users.filter(u=>u.active).length, icon:'✅' },
+            { label:'Inactivos', val: users.filter(u=>!u.active).length, icon:'🚫' },
+          ].map(s=>`<div style="text-align:center;padding:12px;background:var(--bg);border-radius:var(--radius-sm)">
+            <div style="font-size:22px;margin-bottom:4px">${s.icon}</div>
+            <div style="font-family:var(--font-head);font-size:24px;font-weight:800">${s.val}</div>
+            <div class="text-muted text-sm">${s.label}</div>
+          </div>`).join('')}
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-header">
+          <span class="card-title">Usuarios del sistema</span>
+          <div class="search-wrap" style="width:220px">
+            <svg class="search-icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input class="form-control" id="user-search" placeholder="Buscar…" style="padding-left:32px" oninput="Views.filterUserList(this.value)">
+          </div>
+        </div>
+        <div id="user-list">
+          ${users.map(u => Views._renderUserRow(u, roleLabel, roleColor)).join('')}
+        </div>
+      </div>
+
+      <div class="card" style="margin-top:16px;background:#fff8f0;border:1px solid #fed7aa">
+        <div style="display:flex;gap:12px;align-items:flex-start">
+          <span style="font-size:20px">🔐</span>
+          <div>
+            <div style="font-weight:600;margin-bottom:4px;color:#92400e">Seguridad de contraseñas</div>
+            <div style="font-size:13px;color:var(--text-2)">Las contraseñas se almacenan con hash SHA-256 + salt individual. Nunca se guardan en texto plano. En producción, considerá usar un backend dedicado para mayor seguridad.</div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    Views._allUsers = users;
+  },
+
+  _renderUserRow(u, roleLabel, roleColor) {
+    const rl = roleLabel || { admin:'Administrador', supervisor:'Supervisor', agente:'Agente' };
+    const rc = roleColor || { admin:'badge-admin', supervisor:'badge-supervisor', agente:'badge-agente' };
+    const isSelf = u.id === CONFIG.CURRENT_USER?.userId;
+    return `<div class="user-row" id="urow-${u.id}">
+      <div class="user-row-avatar" style="${!u.active?'opacity:.4':''}">${initials(u.name)}</div>
+      <div class="user-row-info">
+        <div class="user-row-name">${esc(u.name)} ${isSelf?'<span style="font-size:11px;color:var(--accent);font-weight:400">(vos)</span>':''}</div>
+        <div class="user-row-meta">@${esc(u.username)} · Desde ${fmtDate(u.createdAt)}</div>
+      </div>
+      <span class="badge ${rc[u.role]||'badge-agente'}" style="flex-shrink:0">${rl[u.role]||u.role}</span>
+      ${!u.active ? '<span class="badge badge-inactivo-user" style="flex-shrink:0">Inactivo</span>' : ''}
+      <div class="user-row-actions">
+        <button class="btn btn-ghost btn-sm" onclick="Views.showEditUserModal('${u.id}')" title="Editar">✎</button>
+        <button class="btn btn-ghost btn-sm" onclick="Views.showChangePassword('${u.id}')" title="Cambiar contraseña">🔑</button>
+        ${!isSelf ? `<button class="btn btn-${u.active?'danger':'secondary'} btn-sm" onclick="Views.toggleUserActive('${u.id}')" title="${u.active?'Desactivar':'Activar'}">${u.active?'🚫':'✓'}</button>` : ''}
+      </div>
+    </div>`;
+  },
+
+  filterUserList(q) {
+    const list = Views._allUsers || [];
+    const filtered = q ? list.filter(u =>
+      u.name.toLowerCase().includes(q.toLowerCase()) ||
+      u.username.toLowerCase().includes(q.toLowerCase())
+    ) : list;
+    document.getElementById('user-list').innerHTML = filtered.map(u => Views._renderUserRow(u)).join('') || '<div class="text-muted text-sm" style="padding:12px 0">Sin resultados</div>';
+  },
+
+  showNewUserModal() {
+    Modal.open('Nuevo usuario', `
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Nombre completo *</label><input class="form-control" id="nu-name" placeholder="Ej: María García"></div>
+        <div class="form-group"><label class="form-label">Nombre de usuario *</label><input class="form-control" id="nu-username" placeholder="maria.garcia" autocomplete="off"></div>
+      </div>
+      <div class="form-group"><label class="form-label">Rol *</label>
+        <select class="form-control" id="nu-role">
+          <option value="agente">Agente — puede gestionar contactos y tareas propias</option>
+          <option value="supervisor">Supervisor — acceso a todo excepto usuarios y configuración</option>
+          <option value="admin">Admin — acceso completo al sistema</option>
+        </select>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Contraseña *</label><input class="form-control" id="nu-pass" type="password" placeholder="Mínimo 6 caracteres"></div>
+        <div class="form-group"><label class="form-label">Confirmar contraseña *</label><input class="form-control" id="nu-pass2" type="password" placeholder="Repetir contraseña"></div>
+      </div>
+      <div class="form-group" style="display:flex;align-items:center;gap:8px">
+        <input type="checkbox" id="nu-active" checked style="width:auto">
+        <label class="form-label" for="nu-active" style="margin:0;cursor:pointer">Usuario activo</label>
+      </div>
+      <div style="background:var(--bg);border-radius:var(--radius-sm);padding:10px 12px;font-size:12.5px;color:var(--text-2)">
+        <strong>Permisos por rol:</strong><br>
+        Agente: contactos (sin eliminar), tareas propias · 
+        Supervisor: + campañas, exportar, conflictos · 
+        Admin: + usuarios, configuración, eliminar
+      </div>
+    `, `
+      <button class="btn btn-secondary" onclick="Modal.close()">Cancelar</button>
+      <button class="btn btn-primary" onclick="Views.createUser()">Crear usuario</button>
+    `);
+  },
+
+  async createUser() {
+    const name = document.getElementById('nu-name').value.trim();
+    const username = document.getElementById('nu-username').value.trim().toLowerCase().replace(/\s+/g,'.');
+    const role = document.getElementById('nu-role').value;
+    const pass = document.getElementById('nu-pass').value;
+    const pass2 = document.getElementById('nu-pass2').value;
+    const active = document.getElementById('nu-active').checked;
+
+    if (!name || !username) return Toast.error('Nombre y usuario son requeridos');
+    if (pass.length < 6) return Toast.error('La contraseña debe tener al menos 6 caracteres');
+    if (pass !== pass2) return Toast.error('Las contraseñas no coinciden');
+
+    try {
+      await Auth.createUser({ username, name, role, password: pass, active });
+      Modal.close(); Toast.success(`Usuario "${name}" creado`); Views.users();
+    } catch(e) { Toast.error(e.message); }
+  },
+
+  async showEditUserModal(id) {
+    const user = await DB.get('users', id);
+    if (!user) return;
+    Modal.open('Editar usuario', `
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Nombre completo *</label><input class="form-control" id="eu-name" value="${esc(user.name)}"></div>
+        <div class="form-group"><label class="form-label">Usuario</label><input class="form-control" value="@${esc(user.username)}" disabled style="opacity:.6"></div>
+      </div>
+      <div class="form-group"><label class="form-label">Rol *</label>
+        <select class="form-control" id="eu-role" ${id === CONFIG.CURRENT_USER?.userId ? 'disabled' : ''}>
+          <option value="agente" ${user.role==='agente'?'selected':''}>Agente</option>
+          <option value="supervisor" ${user.role==='supervisor'?'selected':''}>Supervisor</option>
+          <option value="admin" ${user.role==='admin'?'selected':''}>Admin</option>
+        </select>
+        ${id === CONFIG.CURRENT_USER?.userId ? '<div class="text-muted text-sm mt-4">No podés cambiar tu propio rol.</div>' : ''}
+      </div>
+      <div class="form-group" style="display:flex;align-items:center;gap:8px">
+        <input type="checkbox" id="eu-active" ${user.active?'checked':''} ${id === CONFIG.CURRENT_USER?.userId ? 'disabled' : ''} style="width:auto">
+        <label class="form-label" for="eu-active" style="margin:0;cursor:pointer">Usuario activo</label>
+        ${id === CONFIG.CURRENT_USER?.userId ? '<span class="text-muted text-sm">(No podés desactivarte a vos mismo)</span>' : ''}
+      </div>
+    `, `
+      <button class="btn btn-secondary" onclick="Modal.close()">Cancelar</button>
+      <button class="btn btn-primary" onclick="Views.saveEditUser('${id}')">Guardar cambios</button>
+    `);
+  },
+
+  async saveEditUser(id) {
+    const user = await DB.get('users', id);
+    if (!user) return;
+    const name = document.getElementById('eu-name').value.trim();
+    if (!name) return Toast.error('El nombre es requerido');
+    const roleEl = document.getElementById('eu-role');
+    const activeEl = document.getElementById('eu-active');
+    user.name = name;
+    if (id !== CONFIG.CURRENT_USER?.userId) {
+      user.role = roleEl.value;
+      user.active = activeEl.checked;
+    }
+    user.updatedAt = now();
+    await DB.put('users', user);
+    await Sync.enqueue('upsert','users',user.id,{...user,hash:'[P]',salt:'[P]'});
+    Modal.close(); Toast.success('Usuario actualizado'); Views.users();
+  },
+
+  async toggleUserActive(id) {
+    const user = await DB.get('users', id);
+    if (!user) return;
+    // Check if last admin
+    if (user.role === 'admin' && user.active) {
+      const admins = (await DB.getAll('users')).filter(u=>u.role==='admin' && u.active);
+      if (admins.length <= 1) { Toast.error('No podés desactivar al último administrador'); return; }
+    }
+    user.active = !user.active; user.updatedAt = now();
+    await DB.put('users', user);
+    await Sync.enqueue('upsert','users',user.id,{...user,hash:'[P]',salt:'[P]'});
+    Toast.success(user.active ? 'Usuario activado' : 'Usuario desactivado'); Views.users();
+  },
+
+  // ── DASHBOARD ──
+  async dashboard() {
+    document.getElementById('page-title').textContent = 'Dashboard';
+    document.getElementById('topbar-actions').innerHTML = '';
+    const stats = await Data.getStats();
+    const contacts = await Data.getContacts();
+    const tasks = (await Data.getTasks()).filter(t=>t.status!=='completada').slice(0,5);
+    const recent = [...contacts].sort((a,b)=>(b.updatedAt||'').localeCompare(a.updatedAt||'')).slice(0,6);
+
+    document.getElementById('content').innerHTML = `
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-value">${stats.total}</div>
+          <div class="stat-label">Contactos totales</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">${stats.prospectos}</div>
+          <div class="stat-label">Prospectos activos</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">${stats.clientes}</div>
+          <div class="stat-label">Clientes</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-value">${stats.tareas_hoy}</div>
+          <div class="stat-label">Tareas para hoy</div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Contactos recientes</span>
+            <a href="#contacts" onclick="Router.go('contacts')" class="btn btn-ghost btn-sm">Ver todos →</a>
+          </div>
+          ${recent.length ? recent.map(c=>`
+            <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
+              <div class="user-avatar" style="width:34px;height:34px;font-size:12px">${initials(c.nombre+' '+(c.apellido||''))}</div>
+              <div style="flex:1;min-width:0">
+                <div style="font-weight:600;cursor:pointer" onclick="Router.go('contact',{id:'${c.id}'})">${esc(c.nombre)} ${esc(c.apellido||'')}</div>
+                <div class="text-muted text-sm">${esc(c.razon_social||c.email||'')}</div>
+              </div>
+              <span class="badge badge-${c.status||'prospecto'}">${STATUS_LABELS[c.status]||c.status}</span>
+            </div>
+          `).join('') : '<div class="empty-state"><p>No hay contactos aún</p></div>'}
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Tareas pendientes</span>
+            <a href="#calendar" onclick="Router.go('calendar')" class="btn btn-ghost btn-sm">Ver todas →</a>
+          </div>
+          ${tasks.length ? tasks.map(t=>`
+            <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
+              <span class="badge badge-${t.status}">${t.status.replace('_',' ')}</span>
+              <div style="flex:1;min-width:0">
+                <div style="font-weight:500;font-size:13px">${esc(t.title)}</div>
+                <div class="text-muted text-sm">Vence: ${fmtDate(t.dueDate)}</div>
+              </div>
+              ${t.priority==='alta'?'<span style="color:var(--danger);font-size:12px;font-weight:700">●</span>':''}
+            </div>
+          `).join('') : '<div class="empty-state"><p>No hay tareas pendientes</p></div>'}
+        </div>
+      </div>
+    `;
+  },
+
+  // ── CONTACTS LIST ──
+  async contacts() {
+    document.getElementById('page-title').textContent = 'Contactos';
+    document.getElementById('topbar-actions').innerHTML = `<button class="btn btn-primary" onclick="Views.showContactModal()">+ Nuevo contacto</button>`;
+
+    let contacts = await Data.getContacts();
+    const tags = await Data.getTags();
+    const state = { filter: 'todos', search: '', tag: '' };
+
+    const render = (c=contacts) => {
+      let filtered = c;
+      if (state.filter !== 'todos') filtered = filtered.filter(x => x.status === state.filter);
+      if (state.search) {
+        const q = state.search.toLowerCase();
+        filtered = filtered.filter(x =>
+          (x.nombre||'').toLowerCase().includes(q) ||
+          (x.apellido||'').toLowerCase().includes(q) ||
+          (x.razon_social||'').toLowerCase().includes(q) ||
+          (x.email||'').toLowerCase().includes(q) ||
+          (x.cuit||'').includes(q)
+        );
+      }
+      if (state.tag) filtered = filtered.filter(x => (x.tags||[]).includes(state.tag));
+
+      document.getElementById('contacts-table').innerHTML = filtered.length ? `
+        <div class="table-wrap">
+        <table>
+          <thead><tr>
+            <th>Nombre</th><th>Empresa</th><th>Estado</th><th>Etiquetas</th><th>Última actualización</th><th></th>
+          </tr></thead>
+          <tbody>${filtered.map(c=>`
+            <tr>
+              <td>
+                <div class="contact-name" onclick="Router.go('contact',{id:'${c.id}'})">${esc(c.nombre)} ${esc(c.apellido||'')}</div>
+                <div class="text-secondary">${esc(c.email||'')}</div>
+              </td>
+              <td>${esc(c.razon_social||'—')}</td>
+              <td><span class="badge badge-${c.status||'prospecto'}">${STATUS_LABELS[c.status]||c.status||'—'}</span></td>
+              <td>${(c.tags||[]).map(t=>`<span class="tag-chip">${esc(t)}</span> `).join('')||'—'}</td>
+              <td class="text-muted text-sm">${fmtDate(c.updatedAt)}</td>
+              <td>
+                <button class="btn btn-ghost btn-sm btn-icon" title="Editar" onclick="Views.showContactModal('${c.id}')">✎</button>
+                ${Auth.can('deleteContacts') ? `<button class="btn btn-danger btn-sm btn-icon" title="Eliminar" onclick="Views.confirmDelete('${c.id}')">✕</button>` : ''}
+              </td>
+            </tr>
+          `).join('')}</tbody>
+        </table>
+        </div>
+      ` : `<div class="empty-state"><div class="empty-icon">📋</div><h3>Sin resultados</h3><p>Probá ajustando los filtros o creá un nuevo contacto.</p></div>`;
+    };
+
+    document.getElementById('content').innerHTML = `
+      <div class="filter-bar">
+        <div class="search-wrap" style="flex:1;max-width:320px">
+          <svg class="search-icon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <input class="form-control" id="search-input" placeholder="Buscar por nombre, empresa, CUIT…" style="padding-left:34px">
+        </div>
+        ${['todos','prospecto','cliente','inactivo'].map(f=>`
+          <span class="filter-chip${state.filter===f?' active':''}" data-filter="${f}" onclick="document.querySelectorAll('.filter-chip[data-filter]').forEach(x=>x.classList.remove('active'));this.classList.add('active');Views._contactFilter('${f}','filter')">${f==='todos'?'Todos':STATUS_LABELS[f]}</span>
+        `).join('')}
+        <select class="form-control" id="tag-filter" style="width:auto;padding:5px 10px" onchange="Views._contactFilter(this.value,'tag')">
+          <option value="">Todas las etiquetas</option>
+          ${tags.map(t=>`<option value="${esc(t.name)}">${esc(t.name)}</option>`).join('')}
+        </select>
+      </div>
+      <div class="card" style="padding:0">
+        <div id="contacts-table"></div>
+      </div>
+    `;
+
+    // State helpers
+    Views._contactState = state;
+    Views._contactRender = render;
+    Views._contactFilter = (val, key) => { state[key] = val; render(); };
+    document.getElementById('search-input').addEventListener('input', e => { state.search = e.target.value; render(); });
+    render();
+  },
+
+  async confirmDelete(id) {
+    const c = await Data.getContact(id);
+    if (!confirm(`¿Eliminar a ${c?.nombre} ${c?.apellido||''}? Esta acción no se puede deshacer.`)) return;
+    await Data.deleteContact(id);
+    Toast.success('Contacto eliminado');
+    Views.contacts();
+  },
+
+  // ── CONTACT MODAL (New/Edit) ──
+  async showContactModal(id) {
+    const tags = await Data.getTags();
+    const c = id ? (await Data.getContact(id)) || {} : {};
+    const isEdit = !!id;
+    const notas = isEdit ? await Data.getNotas(id).catch(() => []) : [];
+    const isAdmin = CONFIG.CURRENT_USER?.role === 'admin';
+
+    Modal.open(isEdit ? 'Editar contacto' : 'Nuevo contacto', `
+      <div class="tabs" style="margin-bottom:16px">
+        <button class="tab-btn active" onclick="Views.switchModalTab(this,'tab-personal')">Datos personales</button>
+        <button class="tab-btn" onclick="Views.switchModalTab(this,'tab-contact')">Contacto</button>
+        <button class="tab-btn" onclick="Views.switchModalTab(this,'tab-class')">Clasificación</button>
+        <button class="tab-btn" onclick="Views.switchModalTab(this,'tab-comms')">Comunicaciones ${notas.length ? `<span style="background:var(--accent);color:#fff;border-radius:99px;padding:1px 6px;font-size:10px;margin-left:3px">${notas.length}</span>` : ''}</button>
+      </div>
+
+      <div id="tab-personal" class="tab-pane active">
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">Nombre *</label><input class="form-control" id="c-nombre" value="${esc(c.nombre||'')}"></div>
+          <div class="form-group"><label class="form-label">Apellido</label><input class="form-control" id="c-apellido" value="${esc(c.apellido||'')}"></div>
+        </div>
+        <div class="form-group"><label class="form-label">Razón social</label><input class="form-control" id="c-razon" value="${esc(c.razon_social||'')}"></div>
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">DNI</label><input class="form-control" id="c-dni" value="${esc(c.dni||'')}"></div>
+          <div class="form-group"><label class="form-label">CUIT</label><input class="form-control" id="c-cuit" value="${esc(c.cuit||'')}"></div>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">Condición impositiva</label>
+            <select class="form-control" id="c-condicion">
+              ${['','Responsable Inscripto','Monotributista','Exento','Consumidor Final'].map(o=>`<option ${c.condicion===o?'selected':''}>${o}</option>`).join('')}
+            </select>
+          </div>
+          <div class="form-group"><label class="form-label">Estado</label>
+            <select class="form-control" id="c-status">
+              ${['prospecto','cliente','inactivo','otro'].map(s=>`<option value="${s}" ${c.status===s?'selected':''}>${STATUS_LABELS[s]}</option>`).join('')}
+            </select>
+          </div>
+        </div>
+        <div class="form-group"><label class="form-label">Número de socio</label><input class="form-control" id="c-socio" value="${esc(c.num_socio||'')}"></div>
+        <div class="form-group"><label class="form-label">Observaciones</label><textarea class="form-control" id="c-obs">${esc(c.observaciones||'')}</textarea></div>
+      </div>
+
+      <div id="tab-contact" class="tab-pane">
+        <div class="form-group">
+          <label class="form-label">Email principal</label>
+          <input class="form-control" id="c-email" type="email" value="${esc(c.email||'')}">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Emails adicionales</label>
+          <div id="extra-emails">
+            ${(c.emails_extra||[]).map((e,i)=>`
+              <div class="multi-item mb-2">
+                <input class="form-control" value="${esc(e)}" data-extra-email="${i}">
+                <button class="btn btn-ghost btn-remove" onclick="this.parentElement.remove()">✕</button>
+              </div>`).join('')}
+          </div>
+          <button class="add-item-btn" onclick="Views.addExtraField('extra-emails','email','data-extra-email')">+ Agregar email</button>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Teléfono principal</label>
+          <input class="form-control" id="c-tel" value="${esc(c.telefono||'')}">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Teléfonos adicionales</label>
+          <div id="extra-tels">
+            ${(c.telefonos_extra||[]).map((t,i)=>`
+              <div class="multi-item mb-2">
+                <input class="form-control" value="${esc(t)}" data-extra-tel="${i}">
+                <button class="btn btn-ghost btn-remove" onclick="this.parentElement.remove()">✕</button>
+              </div>`).join('')}
+          </div>
+          <button class="add-item-btn" onclick="Views.addExtraField('extra-tels','tel','data-extra-tel')">+ Agregar teléfono</button>
+        </div>
+        <div class="form-row">
+          <div class="form-group"><label class="form-label">Ciudad / zona</label><input class="form-control" id="c-ciudad" value="${esc((c.domicilios||[])[0]?.ciudad||c.ciudad||'')}"></div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Domicilios</label>
+          <div id="domicilios-list">
+            ${(c.domicilios||[c.direccion ? {calle:c.direccion,altura:'',barrio:'',ciudad:c.ciudad||''} : null].filter(Boolean)).map((d,i)=>`
+              <div class="domicilio-item" data-dom-idx="${i}" style="background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:8px">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+                  <span style="font-size:11.5px;font-weight:600;color:var(--text-2)">Domicilio ${i+1}</span>
+                  ${i>0?`<button class="btn btn-ghost btn-remove btn-sm" onclick="this.closest('.domicilio-item').remove();Views._renumberDomicilios()">✕ Quitar</button>`:''}
+                </div>
+                <div class="form-row" style="margin-bottom:6px">
+                  <div class="form-group" style="margin-bottom:0"><label class="form-label">Calle</label><input class="form-control dom-calle" placeholder="Ej: Av. San Martín" value="${esc(d.calle||'')}"></div>
+                  <div class="form-group" style="margin-bottom:0"><label class="form-label">Altura / Nro.</label><input class="form-control dom-altura" placeholder="Ej: 1234" value="${esc(d.altura||'')}"></div>
+                </div>
+                <div class="form-row" style="margin-bottom:0">
+                  <div class="form-group" style="margin-bottom:0"><label class="form-label">Barrio</label><input class="form-control dom-barrio" placeholder="Ej: Centro" value="${esc(d.barrio||'')}"></div>
+                  <div class="form-group" style="margin-bottom:0"><label class="form-label">Ciudad</label><input class="form-control dom-ciudad" placeholder="Ej: Comodoro Rivadavia" value="${esc(d.ciudad||'')}"></div>
+                </div>
+              </div>`).join('')}
+          </div>
+          <button class="add-item-btn" onclick="Views.addDomicilio()">+ Agregar domicilio</button>
+        </div>
+      </div>
+
+      <div id="tab-class" class="tab-pane">
+        <div class="form-group">
+          <label class="form-label">Etiquetas</label>
+          <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px" id="tag-list">
+            ${tags.map(t=>`
+              <label style="display:flex;align-items:center;gap:5px;cursor:pointer;font-size:13px">
+                <input type="checkbox" value="${esc(t.name)}" ${(c.tags||[]).includes(t.name)?'checked':''}> ${esc(t.name)}
+              </label>
+            `).join('')}
+          </div>
+          <div style="display:flex;gap:8px">
+            <input class="form-control" id="new-tag-input" placeholder="Nueva etiqueta…" style="flex:1">
+            <button class="btn btn-secondary btn-sm" onclick="Views.addTagFromModal()">Agregar</button>
+          </div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Hashtags / flags</label>
+          <input class="form-control" id="c-hashtags" placeholder="#vip #potencial #zona_norte" value="${esc((c.hashtags||[]).join(' '))}">
+          <div class="text-muted text-sm mt-4">Separados por espacio, empezando con #</div>
+        </div>
+      </div>
+
+      <div id="tab-comms" class="tab-pane">
+        ${!isEdit ? `
+          <div class="empty-state" style="padding:32px 0">
+            <div class="empty-icon">💬</div>
+            <h3>Guardá el contacto primero</h3>
+            <p>Una vez creado, podrás registrar comunicaciones desde esta solapa.</p>
+          </div>
+        ` : `
+          <div class="nota-compose" id="modal-nota-compose">
+            <textarea id="modal-nota-text" maxlength="2000"
+              placeholder="Describí la comunicación, gestión recibida o novedad…"
+              oninput="Views._notaCount2(this)"
+              style="min-height:80px"></textarea>
+            <div class="nota-compose-footer">
+              <span class="nota-count" id="modal-nota-count">0 / 2000</span>
+              <button class="btn btn-primary btn-sm" onclick="Views.saveModalNota('${id}')">
+                Registrar
+              </button>
+            </div>
+          </div>
+          <div id="modal-notas-list" style="max-height:280px;overflow-y:auto">
+            ${notas.length ? notas.map(n => Views._renderNota(n, isAdmin)).join('') :
+              `<div class="empty-state" style="padding:20px 0">
+                <div class="empty-icon" style="font-size:28px">💬</div>
+                <p style="font-size:12.5px">Aún no hay comunicaciones registradas para este contacto.</p>
+              </div>`}
+          </div>
+        `}
+      </div>
+    `, `
+      <button class="btn btn-secondary" onclick="Modal.close()">Cancelar</button>
+      <button class="btn btn-primary" onclick="Views.saveContactFromModal('${id||''}')">
+        ${isEdit ? 'Guardar cambios' : 'Crear contacto'}
+      </button>
+    `);
+  },
+
+  switchModalTab(btn, tabId) {
+    document.querySelectorAll('.modal .tab-btn').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('.modal .tab-pane').forEach(p=>p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById(tabId)?.classList.add('active');
+  },
+
+  _notaCount2(el) {
+    const len = el.value.length;
+    const counter = document.getElementById('modal-nota-count');
+    if (counter) {
+      counter.textContent = `${len} / 2000`;
+      counter.className = 'nota-count' + (len > 1800 ? ' near-limit' : '');
+    }
+  },
+
+  async saveModalNota(contactId) {
+    const textarea = document.getElementById('modal-nota-text');
+    const text = textarea?.value?.trim();
+    if (!text) { Toast.error('Escribí algo antes de registrar'); return; }
+
+    const btn = document.querySelector('#modal-nota-compose .btn-primary');
+    if (btn) { btn.disabled = true; btn.textContent = 'Guardando…'; }
+
+    const nota = await Data.saveNota({ contactId, observacion: text });
+
+    textarea.value = '';
+    Views._notaCount2(textarea);
+    if (btn) { btn.disabled = false; btn.textContent = 'Registrar'; }
+
+    // Prepend new entry to the list
+    const list = document.getElementById('modal-notas-list');
+    const emptyState = list?.querySelector('.empty-state');
+    if (emptyState) emptyState.remove();
+    const isAdmin = CONFIG.CURRENT_USER?.role === 'admin';
+    list.insertAdjacentHTML('afterbegin', Views._renderNota(nota, isAdmin));
+
+    // Update tab badge count
+    const allNotas = await Data.getNotas(contactId);
+    const commsTab = document.querySelector('[onclick*="tab-comms"]');
+    if (commsTab) {
+      commsTab.innerHTML = `Comunicaciones <span style="background:var(--accent);color:#fff;border-radius:99px;padding:1px 6px;font-size:10px;margin-left:3px">${allNotas.length}</span>`;
+    }
+
+    Toast.success('Comunicación registrada');
+  },
+
+  addExtraField(containerId, type, attr) {
+    const c = document.getElementById(containerId);
+    const idx = c.querySelectorAll('['+attr+']').length;
+    const div = document.createElement('div');
+    div.className = 'multi-item mb-2';
+    div.innerHTML = `<input class="form-control" type="${type}" ${attr}="${idx}"><button class="btn btn-ghost btn-remove" onclick="this.parentElement.remove()">✕</button>`;
+    c.appendChild(div);
+  },
+
+  addDomicilio() {
+    const list = document.getElementById('domicilios-list');
+    const idx = list.querySelectorAll('.domicilio-item').length;
+    const div = document.createElement('div');
+    div.className = 'domicilio-item';
+    div.setAttribute('data-dom-idx', idx);
+    div.style.cssText = 'background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);padding:10px 12px;margin-bottom:8px';
+    div.innerHTML = `
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+        <span style="font-size:11.5px;font-weight:600;color:var(--text-2)">Domicilio ${idx+1}</span>
+        <button class="btn btn-ghost btn-remove btn-sm" onclick="this.closest('.domicilio-item').remove();Views._renumberDomicilios()">✕ Quitar</button>
+      </div>
+      <div class="form-row" style="margin-bottom:6px">
+        <div class="form-group" style="margin-bottom:0"><label class="form-label">Calle</label><input class="form-control dom-calle" placeholder="Ej: Av. San Martín" value=""></div>
+        <div class="form-group" style="margin-bottom:0"><label class="form-label">Altura / Nro.</label><input class="form-control dom-altura" placeholder="Ej: 1234" value=""></div>
+      </div>
+      <div class="form-row" style="margin-bottom:0">
+        <div class="form-group" style="margin-bottom:0"><label class="form-label">Barrio</label><input class="form-control dom-barrio" placeholder="Ej: Centro" value=""></div>
+        <div class="form-group" style="margin-bottom:0"><label class="form-label">Ciudad</label><input class="form-control dom-ciudad" placeholder="Ej: Comodoro Rivadavia" value=""></div>
+      </div>`;
+    list.appendChild(div);
+  },
+
+  _renumberDomicilios() {
+    document.querySelectorAll('#domicilios-list .domicilio-item').forEach((el, i) => {
+      const label = el.querySelector('span');
+      if (label) label.textContent = `Domicilio ${i+1}`;
+    });
+  },
+
+  _readDomicilios() {
+    return [...document.querySelectorAll('#domicilios-list .domicilio-item')].map(el => ({
+      calle:  el.querySelector('.dom-calle')?.value.trim()  || '',
+      altura: el.querySelector('.dom-altura')?.value.trim() || '',
+      barrio: el.querySelector('.dom-barrio')?.value.trim() || '',
+      ciudad: el.querySelector('.dom-ciudad')?.value.trim() || '',
+    })).filter(d => d.calle || d.ciudad);
+  },
+
+  async addTagFromModal() {
+    const input = document.getElementById('new-tag-input');
+    const name = input.value.trim();
+    if (!name) return;
+    await Data.saveTag({ name });
+    const list = document.getElementById('tag-list');
+    const label = document.createElement('label');
+    label.style.cssText = 'display:flex;align-items:center;gap:5px;cursor:pointer;font-size:13px';
+    label.innerHTML = `<input type="checkbox" value="${esc(name)}" checked> ${esc(name)}`;
+    list.appendChild(label);
+    input.value = '';
+    Toast.success('Etiqueta "' + name + '" creada');
+  },
+
+  async saveContactFromModal(id) {
+    const nombre = document.getElementById('c-nombre').value.trim();
+    if (!nombre) return Toast.error('El nombre es requerido');
+
+    const emails_extra = [...document.querySelectorAll('[data-extra-email]')].map(i=>i.value.trim()).filter(Boolean);
+    const telefonos_extra = [...document.querySelectorAll('[data-extra-tel]')].map(i=>i.value.trim()).filter(Boolean);
+    const tags = [...document.querySelectorAll('#tag-list input:checked')].map(i=>i.value);
+    const hashtags = document.getElementById('c-hashtags').value.trim().split(/\s+/).filter(h=>h.startsWith('#'));
+
+    const domicilios = Views._readDomicilios();
+    // Keep backward-compat ciudad field from first domicilio
+    const ciudad = domicilios[0]?.ciudad || document.getElementById('c-ciudad')?.value?.trim() || '';
+
+    const contact = {
+      id: id || undefined,
+      nombre,
+      apellido: document.getElementById('c-apellido').value.trim(),
+      razon_social: document.getElementById('c-razon').value.trim(),
+      dni: document.getElementById('c-dni').value.trim(),
+      cuit: document.getElementById('c-cuit').value.trim(),
+      condicion: document.getElementById('c-condicion').value,
+      status: document.getElementById('c-status').value,
+      num_socio: document.getElementById('c-socio').value.trim(),
+      observaciones: document.getElementById('c-obs').value.trim(),
+      email: document.getElementById('c-email').value.trim(),
+      emails_extra,
+      telefono: document.getElementById('c-tel').value.trim(),
+      telefonos_extra,
+      ciudad,
+      domicilios,
+      tags, hashtags,
+    };
+    if (id) contact.id = id;
+
+    await Data.saveContact(contact);
+    Modal.close();
+    Toast.success(id ? 'Contacto actualizado' : 'Contacto creado');
+    Views.contacts();
+  },
+
+  // ── CONTACT DETAIL ──
+  async contact(params) {
+    const id = params?.id;
+    if (!id) return Router.go('contacts');
+    const c = await Data.getContact(id);
+    if (!c) return Router.go('contacts');
+    const gestiones = await Data.getGestiones(id);
+    const tasks = await Data.getTasks({ contactId: id });
+    const notas = await Data.getNotas(id).catch(() => []);
+    const isAdmin = CONFIG.CURRENT_USER?.role === 'admin';
+
+    document.getElementById('page-title').textContent = `${c.nombre} ${c.apellido||''}`;
+    document.getElementById('topbar-actions').innerHTML = `
+      <button class="btn btn-secondary" onclick="Router.go('contacts')">← Volver</button>
+      <button class="btn btn-primary" onclick="Views.showContactModal('${id}')">✎ Editar</button>
+    `;
+
+    const GESTION_ICONS = { Llamada:'📞', Notificación:'🔔', Campaña:'📢', Reunión:'🤝', Visita:'🏢', Tarea:'✅', Nota:'📝', 'Cambio de estado':'🔄' };
+
+    document.getElementById('content').innerHTML = `
+      <div class="contact-hero">
+        <div class="contact-avatar-lg">${initials(c.nombre+' '+(c.apellido||''))}</div>
+        <div class="contact-hero-info">
+          <div class="contact-hero-name">${esc(c.nombre)} ${esc(c.apellido||'')}</div>
+          <div class="contact-hero-sub">${esc(c.razon_social||c.email||'')} ${c.ciudad?'· '+esc(c.ciudad):''}</div>
+          <div style="margin-top:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+            <span class="badge badge-${c.status||'prospecto'}">${STATUS_LABELS[c.status]||c.status}</span>
+            ${(c.tags||[]).map(t=>`<span class="tag-chip">${esc(t)}</span>`).join('')}
+          </div>
+        </div>
+        <div class="contact-hero-actions">
+          <button class="btn btn-secondary btn-sm" onclick="Views.showGestionModal('${id}')">+ Gestión</button>
+          <button class="btn btn-secondary btn-sm" onclick="Views.showTaskModal('${id}')">+ Tarea</button>
+        </div>
+      </div>
+
+      <div class="tabs">
+        <button class="tab-btn active" onclick="Views.switchTab(this,'det-info')">Datos</button>
+        <button class="tab-btn" onclick="Views.switchTab(this,'det-gest')">Gestiones (${gestiones.length})</button>
+        <button class="tab-btn" onclick="Views.switchTab(this,'det-tasks')">Tareas (${tasks.length})</button>
+        <button class="tab-btn" onclick="Views.switchTab(this,'det-notas')">Novedades ${notas.length ? `<span style="background:var(--accent);color:#fff;border-radius:99px;padding:1px 6px;font-size:10px;margin-left:4px">${notas.length}</span>` : ''}</button>
+      </div>
+
+      <div id="det-info" class="tab-pane active">
+        <div class="card">
+          <div class="card-title mb-4">Información personal</div>
+          <div class="info-grid">
+            ${[
+              ['DNI', c.dni], ['CUIT', c.cuit], ['Condición', c.condicion], ['N° Socio', c.num_socio],
+              ['Email', c.email], ['Teléfono', c.telefono],
+            ].map(([l,v])=>`<div class="info-field"><label>${l}</label><div class="info-value">${esc(v||'—')}</div></div>`).join('')}
+          </div>
+          ${(c.domicilios||[]).length ? `
+            <div class="divider"></div>
+            <div class="form-label" style="margin-bottom:8px">Domicilios</div>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              ${(c.domicilios||[]).map((d,i)=>`
+                <div style="background:var(--bg);border-radius:var(--radius-sm);padding:8px 12px;border-left:3px solid var(--accent)">
+                  <div style="font-size:11px;font-weight:600;color:var(--text-3);margin-bottom:3px">DOMICILIO ${i+1}</div>
+                  <div style="font-size:13px;font-weight:500">${esc(d.calle||'')}${d.altura?' '+esc(d.altura):''}</div>
+                  <div style="font-size:12px;color:var(--text-2)">${[d.barrio,d.ciudad].filter(Boolean).map(esc).join(' · ')}</div>
+                </div>`).join('')}
+            </div>` : (c.ciudad||c.direccion) ? `
+            <div class="divider"></div>
+            <div class="info-grid">
+              ${c.ciudad ? `<div class="info-field"><label>Ciudad</label><div class="info-value">${esc(c.ciudad)}</div></div>` : ''}
+              ${c.direccion ? `<div class="info-field"><label>Dirección</label><div class="info-value">${esc(c.direccion)}</div></div>` : ''}
+            </div>` : ''}
+          ${(c.emails_extra?.length||c.telefonos_extra?.length)?`
+            <div class="divider"></div>
+            <div class="info-grid">
+              ${(c.emails_extra||[]).map((e,i)=>`<div class="info-field"><label>Email ${i+2}</label><div class="info-value">${esc(e)}</div></div>`).join('')}
+              ${(c.telefonos_extra||[]).map((t,i)=>`<div class="info-field"><label>Tel. ${i+2}</label><div class="info-value">${esc(t)}</div></div>`).join('')}
+            </div>`:''}
+          ${c.observaciones?`<div class="divider"></div><div class="form-group"><div class="form-label">Observaciones</div><div style="font-size:13.5px;color:var(--text-2)">${esc(c.observaciones)}</div></div>`:''}
+          ${(c.hashtags?.length)?`<div style="margin-top:12px;display:flex;gap:6px;flex-wrap:wrap">${c.hashtags.map(h=>`<span class="tag-chip" style="background:#f0fdf4;color:#166534">${esc(h)}</span>`).join('')}</div>`:''}
+        </div>
+      </div>
+
+      <div id="det-gest" class="tab-pane">
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Historial de gestiones</span>
+            <button class="btn btn-primary btn-sm" onclick="Views.showGestionModal('${id}')">+ Nueva gestión</button>
+          </div>
+          ${gestiones.length ? `<div class="timeline">${gestiones.map(g=>`
+            <div class="timeline-item">
+              <div class="timeline-dot">${GESTION_ICONS[g.tipo]||'📌'}</div>
+              <div class="timeline-content">
+                <div class="timeline-header">
+                  <span class="timeline-type">${esc(g.tipo)}</span>
+                  <span class="timeline-meta">${fmtDatetime(g.createdAt)} · ${esc(g.userName||'?')}</span>
+                </div>
+                <div class="timeline-desc">${esc(g.descripcion||'')}</div>
+                ${g.resultado?`<div class="timeline-desc" style="margin-top:3px">Resultado: ${esc(g.resultado)}</div>`:''}
+                ${g.proxima_accion?`<div class="timeline-next">→ Próxima acción: ${esc(g.proxima_accion)}</div>`:''}
+              </div>
+            </div>`).join('')}</div>`
+          : `<div class="empty-state"><div class="empty-icon">📞</div><h3>Sin gestiones</h3><p>Registrá la primera interacción con este contacto.</p></div>`}
+        </div>
+      </div>
+
+      <div id="det-tasks" class="tab-pane">
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Tareas</span>
+            <button class="btn btn-primary btn-sm" onclick="Views.showTaskModal('${id}')">+ Nueva tarea</button>
+          </div>
+          ${tasks.length ? tasks.map(t=>`
+            <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--border)">
+              <span class="badge badge-${t.status}">${t.status.replace('_',' ')}</span>
+              <div style="flex:1">
+                <div style="font-weight:500">${esc(t.title)}</div>
+                <div class="text-muted text-sm">Vence: ${fmtDate(t.dueDate)} · Prioridad: ${t.priority||'normal'}</div>
+              </div>
+              <button class="btn btn-secondary btn-sm" onclick="Views.completeTask('${t.id}','${id}')">✓</button>
+            </div>
+          `).join('')
+          : `<div class="empty-state"><div class="empty-icon">✅</div><h3>Sin tareas</h3><p>Agendá seguimientos para este contacto.</p></div>`}
+        </div>
+      </div>
+
+      <div id="det-notas" class="tab-pane">
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Novedades del contacto</span>
+            <span class="nota-immutable-badge">🔒 Registros inmutables</span>
+          </div>
+
+          <!-- Compose area -->
+          <div class="nota-compose" id="nota-compose-box">
+            <textarea id="nota-text" maxlength="2000"
+              placeholder="Escribí la novedad o gestión recibida… (máx. 2000 caracteres)"
+              oninput="Views._notaCount(this)"></textarea>
+            <div class="nota-compose-footer">
+              <span class="nota-count" id="nota-char-count">0 / 2000</span>
+              <button class="btn btn-primary btn-sm" onclick="Views.saveNota('${id}')">
+                Guardar novedad
+              </button>
+            </div>
+          </div>
+
+          <!-- Entries list -->
+          <div id="notas-list">
+            ${notas.length ? notas.map(n => Views._renderNota(n, isAdmin)).join('') :
+              `<div class="empty-state" style="padding:28px 0">
+                <div class="empty-icon">📋</div>
+                <h3>Sin novedades</h3>
+                <p>Las novedades que registres aparecerán aquí con fecha, hora y agente.</p>
+              </div>`}
+          </div>
+        </div>
+      </div>
+    `;
+  },
+
+  _renderNota(n, isAdmin) {
+    const ini = (n.userName||'?').split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+    const roleColors = { admin:'#e85d26', supervisor:'#0ea5e9', agente:'#16a34a' };
+    const avatarColor = roleColors[n.userRole] || '#71717a';
+    const canDelete = isAdmin !== undefined ? isAdmin : (CONFIG.CURRENT_USER?.role === 'admin');
+    return `<div class="nota-entry" id="nota-${n.id}">
+      <div class="nota-header">
+        <div class="nota-avatar" style="background:${avatarColor}">${esc(ini)}</div>
+        <div class="nota-meta">
+          <strong>${esc(n.userName||'?')}</strong>
+          <span style="margin-left:4px;font-size:10px;opacity:.7">(${n.userRole||'agente'})</span>
+        </div>
+        <span class="nota-ts">${fmtDatetime(n.createdAt)}</span>
+        ${canDelete ? `<button class="btn btn-danger btn-sm btn-icon" style="margin-left:6px" title="Eliminar (solo admin)" onclick="Views._confirmDeleteNota('${n.id}','${n.contactId}')">✕</button>` : ''}
+      </div>
+      <div class="nota-body">${esc(n.observacion)}</div>
+    </div>`;
+  },
+
+  _notaCount(el) {
+    const len = el.value.length;
+    const counter = document.getElementById('nota-char-count');
+    if (counter) {
+      counter.textContent = `${len} / 2000`;
+      counter.className = 'nota-count' + (len > 1800 ? ' near-limit' : '');
+    }
+  },
+
+  async saveNota(contactId) {
+    const textarea = document.getElementById('nota-text');
+    const text = textarea?.value?.trim();
+    if (!text) { Toast.error('Escribí algo antes de guardar'); return; }
+    if (text.length > 2000) { Toast.error('Máximo 2000 caracteres'); return; }
+
+    const btn = document.querySelector('#nota-compose-box .btn-primary');
+    if (btn) { btn.disabled = true; btn.textContent = 'Guardando…'; }
+
+    const nota = await Data.saveNota({ contactId, observacion: text });
+
+    textarea.value = '';
+    Views._notaCount(textarea);
+    if (btn) { btn.disabled = false; btn.textContent = 'Guardar novedad'; }
+
+    // Prepend the new nota at the top of the list (no full reload)
+    const list = document.getElementById('notas-list');
+    const isAdmin = CONFIG.CURRENT_USER?.role === 'admin';
+    const emptyState = list?.querySelector('.empty-state');
+    if (emptyState) emptyState.remove();
+    list.insertAdjacentHTML('afterbegin', Views._renderNota(nota, isAdmin));
+
+    // Update tab counter
+    const notas = await Data.getNotas(contactId);
+    const tabBtn = document.querySelector('[onclick*="det-notas"]');
+    if (tabBtn) {
+      tabBtn.innerHTML = `Novedades <span style="background:var(--accent);color:#fff;border-radius:99px;padding:1px 6px;font-size:10px;margin-left:4px">${notas.length}</span>`;
+    }
+
+    Toast.success('Novedad registrada');
+  },
+
+  _confirmDeleteNota(notaId, contactId) {
+    if (!confirm('¿Eliminar esta novedad? Esta acción queda registrada en la auditoría.')) return;
+    Views._deleteNota(notaId, contactId);
+  },
+
+  async _deleteNota(notaId, contactId) {
+    await Data.deleteNota(notaId);
+    // Remove from both possible list containers
+    const el = document.getElementById(`nota-${notaId}`);
+    if (el) {
+      el.style.transition = 'opacity .2s, transform .2s';
+      el.style.opacity = '0';
+      el.style.transform = 'translateX(-8px)';
+      setTimeout(() => {
+        el.remove();
+        // Show empty state in whichever list is now empty
+        for (const listId of ['notas-list', 'modal-notas-list']) {
+          const list = document.getElementById(listId);
+          if (list && !list.querySelector('.nota-entry')) {
+            list.innerHTML = `<div class="empty-state" style="padding:20px 0"><div class="empty-icon" style="font-size:28px">💬</div><p style="font-size:12.5px">Aún no hay comunicaciones registradas para este contacto.</p></div>`;
+          }
+        }
+      }, 220);
+    }
+    // Update tab badge in both detail view and modal
+    const notas = await Data.getNotas(contactId);
+    const count = notas.length;
+    for (const sel of ['[onclick*="det-notas"]', '[onclick*="tab-comms"]']) {
+      const tabBtn = document.querySelector(sel);
+      if (tabBtn) {
+        const label = sel.includes('det-notas') ? 'Novedades' : 'Comunicaciones';
+        tabBtn.innerHTML = count
+          ? `${label} <span style="background:var(--accent);color:#fff;border-radius:99px;padding:1px 6px;font-size:10px;margin-left:3px">${count}</span>`
+          : label;
+      }
+    }
+    Toast.success('Registro eliminado');
+  },
+
+  switchTab(btn, tabId) {
+    document.querySelectorAll('#content .tab-btn').forEach(b=>b.classList.remove('active'));
+    document.querySelectorAll('#content .tab-pane').forEach(p=>p.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById(tabId)?.classList.add('active');
+  },
+
+  async completeTask(taskId, contactId) {
+    const t = await DB.get('tasks', taskId);
+    if (t) { t.status='completada'; t.completedAt=now(); await Data.saveTask(t); }
+    Views.contact({ id: contactId });
+  },
+
+  // ── GESTIÓN MODAL ──
+  showGestionModal(contactId) {
+    Modal.open('Registrar gestión', `
+      <div class="form-group"><label class="form-label">Tipo de gestión *</label>
+        <select class="form-control" id="g-tipo">
+          ${GESTION_TYPES.map(t=>`<option>${t}</option>`).join('')}
+        </select>
+      </div>
+      <div class="form-group"><label class="form-label">Descripción</label>
+        <textarea class="form-control" id="g-desc" placeholder="Detallá la gestión realizada…"></textarea>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Resultado</label>
+          <input class="form-control" id="g-resultado" placeholder="Ej: Interesado, sin respuesta…">
+        </div>
+        <div class="form-group"><label class="form-label">Próxima acción</label>
+          <input class="form-control" id="g-proxima" placeholder="Ej: Llamar en 3 días…">
+        </div>
+      </div>
+    `, `
+      <button class="btn btn-secondary" onclick="Modal.close()">Cancelar</button>
+      <button class="btn btn-primary" onclick="Views.saveGestion('${contactId}')">Registrar</button>
+    `);
+  },
+
+  async saveGestion(contactId) {
+    const tipo = document.getElementById('g-tipo').value;
+    const descripcion = document.getElementById('g-desc').value.trim();
+    await Data.saveGestion({ contactId, tipo, descripcion,
+      resultado: document.getElementById('g-resultado').value.trim(),
+      proxima_accion: document.getElementById('g-proxima').value.trim(),
+    });
+    Modal.close(); Toast.success('Gestión registrada');
+    Views.contact({ id: contactId });
+  },
+
+  // ── TASK MODAL ──
+  async showTaskModal(contactId='') {
+    const users = await Data.getUsers();
+    const today = new Date().toISOString().split('T')[0];
+    Modal.open('Nueva tarea', `
+      <div class="form-group"><label class="form-label">Título *</label><input class="form-control" id="t-title" placeholder="Describí la tarea…"></div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Fecha de vencimiento</label><input class="form-control" id="t-date" type="date" value="${today}"></div>
+        <div class="form-group"><label class="form-label">Hora</label><input class="form-control" id="t-time" type="time"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Prioridad</label>
+          <select class="form-control" id="t-priority">
+            <option value="baja">Baja</option><option value="normal" selected>Normal</option><option value="alta">Alta</option>
+          </select>
+        </div>
+        <div class="form-group"><label class="form-label">Asignar a</label>
+          <select class="form-control" id="t-assigned">
+            <option value="${CONFIG.CURRENT_USER?.id||''}">${CONFIG.CURRENT_USER?.name||'Yo'}</option>
+            ${users.filter(u=>u.id!==CONFIG.CURRENT_USER?.id).map(u=>`<option value="${u.id}">${esc(u.name)}</option>`).join('')}
+          </select>
+        </div>
+      </div>
+      <div class="form-group"><label class="form-label">Descripción</label><textarea class="form-control" id="t-desc" rows="2"></textarea></div>
+    `, `
+      <button class="btn btn-secondary" onclick="Modal.close()">Cancelar</button>
+      <button class="btn btn-primary" onclick="Views.saveTask('${contactId}')">Crear tarea</button>
+    `);
+  },
+
+  async saveTask(contactId) {
+    const title = document.getElementById('t-title').value.trim();
+    if (!title) return Toast.error('El título es requerido');
+    const dueDate = document.getElementById('t-date').value + (document.getElementById('t-time').value ? 'T'+document.getElementById('t-time').value : '');
+    await Data.saveTask({ title, contactId, dueDate,
+      priority: document.getElementById('t-priority').value,
+      assignedTo: document.getElementById('t-assigned').value,
+      description: document.getElementById('t-desc').value.trim(),
+      status: 'pendiente',
+    });
+    Modal.close(); Toast.success('Tarea creada');
+    if (contactId) Views.contact({ id: contactId }); else Views.calendar();
+  },
+
+  // ── CAMPAIGNS ──
+  async campaigns() {
+    if (!Auth.can('campaigns')) { Toast.error('Acceso restringido. Necesitás rol Supervisor o Admin.'); Router.go('dashboard'); return; }
+    document.getElementById('page-title').textContent = 'Campañas';
+    document.getElementById('topbar-actions').innerHTML = `<button class="btn btn-primary" onclick="Views.showCampaignModal()">+ Nueva campaña</button>`;
+    const campaigns = await Data.getCampaigns();
+    const allContacts = await Data.getContacts();
+
+    document.getElementById('content').innerHTML = `
+      ${campaigns.length ? `<div class="campaigns-grid">
+        ${campaigns.map(camp=>{
+          const cnt = allContacts.filter(c=>(c.campaigns||[]).includes(camp.id)).length;
+          return `<div class="card campaign-card" onclick="Views.campaignDetail('${camp.id}')">
+            <div class="card-title">${esc(camp.name)}</div>
+            <div class="text-muted text-sm" style="margin-top:4px">${esc(camp.description||'')}</div>
+            <div class="campaign-meta">
+              <span>📋 ${cnt} contactos</span>
+              <span>📅 ${fmtDate(camp.createdAt)}</span>
+              <span class="badge badge-${camp.status||'prospecto'}" style="margin-left:auto">${camp.status||'borrador'}</span>
+            </div>
+          </div>`;
+        }).join('')}
+      </div>` : `<div class="empty-state" style="padding-top:60px"><div class="empty-icon">📢</div><h3>No hay campañas</h3><p>Creá tu primera campaña para gestionar selecciones de contactos.</p></div>`}
+    `;
+  },
+
+  showCampaignModal() {
+    Modal.open('Nueva campaña', `
+      <div class="form-group"><label class="form-label">Nombre *</label><input class="form-control" id="camp-name" placeholder="Ej: Campaña Q1 2025"></div>
+      <div class="form-group"><label class="form-label">Descripción</label><textarea class="form-control" id="camp-desc" rows="2" placeholder="Objetivo de la campaña…"></textarea></div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Estado</label>
+          <select class="form-control" id="camp-status">
+            <option value="borrador">Borrador</option><option value="activa">Activa</option><option value="cerrada">Cerrada</option>
+          </select>
+        </div>
+        <div class="form-group"><label class="form-label">Fecha de ejecución</label><input class="form-control" id="camp-date" type="date"></div>
+      </div>
+    `, `
+      <button class="btn btn-secondary" onclick="Modal.close()">Cancelar</button>
+      <button class="btn btn-primary" onclick="Views.saveCampaign()">Crear campaña</button>
+    `);
+  },
+
+  async saveCampaign() {
+    const name = document.getElementById('camp-name').value.trim();
+    if (!name) return Toast.error('El nombre es requerido');
+    await Data.saveCampaign({ name,
+      description: document.getElementById('camp-desc').value.trim(),
+      status: document.getElementById('camp-status').value,
+      execDate: document.getElementById('camp-date').value,
+    });
+    Modal.close(); Toast.success('Campaña creada'); Views.campaigns();
+  },
+
+  async campaignDetail(id) {
+    const camp = await DB.get('campaigns', id);
+    if (!camp) return;
+    const allContacts = await Data.getContacts();
+    const tags = await Data.getTags();
+    let campContacts = allContacts.filter(c=>(c.campaigns||[]).includes(id));
+    let filtered = [...allContacts];
+    let filterStatus = '', filterTag = '', searchQ = '';
+
+    const renderTable = () => {
+      let list = filtered;
+      if (filterStatus) list = list.filter(c=>c.status===filterStatus);
+      if (filterTag) list = list.filter(c=>(c.tags||[]).includes(filterTag));
+      if (searchQ) { const q=searchQ.toLowerCase(); list=list.filter(c=>(c.nombre||'').toLowerCase().includes(q)||(c.apellido||'').toLowerCase().includes(q)||(c.razon_social||'').toLowerCase().includes(q)); }
+      document.getElementById('camp-picker').innerHTML = list.map(c=>`
+        <label style="display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--border);cursor:pointer;font-size:13px">
+          <input type="checkbox" value="${c.id}" ${(c.campaigns||[]).includes(id)?'checked':''} onchange="Views.toggleCampContact('${id}','${c.id}',this.checked)">
+          <div style="flex:1">
+            <span style="font-weight:500">${esc(c.nombre)} ${esc(c.apellido||'')}</span>
+            ${c.razon_social?`<span class="text-muted text-sm"> · ${esc(c.razon_social)}</span>`:''}
+          </div>
+          <span class="badge badge-${c.status}">${STATUS_LABELS[c.status]||c.status}</span>
+        </label>
+      `).join('') || '<div class="text-muted text-sm" style="padding:12px 0">Sin resultados</div>';
+    };
+
+    document.getElementById('page-title').textContent = camp.name;
+    document.getElementById('topbar-actions').innerHTML = `
+      <button class="btn btn-secondary" onclick="Router.go('campaigns')">← Volver</button>
+      <button class="btn btn-primary" onclick="Views.exportCampaign('${id}')">⬇ Exportar selección</button>
+    `;
+    document.getElementById('content').innerHTML = `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+        <div class="card">
+          <div class="card-title mb-4">Seleccionar contactos</div>
+          <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+            <input class="form-control" id="camp-search" placeholder="Buscar…" style="flex:1" oninput="Views._campSearch(this.value)">
+            <select class="form-control" style="width:auto" onchange="Views._campFilter(this.value,'status')">
+              <option value="">Todos</option>${['prospecto','cliente','inactivo'].map(s=>`<option value="${s}">${STATUS_LABELS[s]}</option>`).join('')}
+            </select>
+            <select class="form-control" style="width:auto" onchange="Views._campFilter(this.value,'tag')">
+              <option value="">Etiqueta</option>${tags.map(t=>`<option value="${esc(t.name)}">${esc(t.name)}</option>`).join('')}
+            </select>
+          </div>
+          <div id="camp-picker" style="max-height:400px;overflow-y:auto"></div>
+        </div>
+        <div class="card">
+          <div class="card-title mb-4">Info de campaña</div>
+          <div class="info-grid">
+            <div class="info-field"><label>Nombre</label><div class="info-value">${esc(camp.name)}</div></div>
+            <div class="info-field"><label>Estado</label><div class="info-value"><span class="badge badge-${camp.status||'prospecto'}">${camp.status||'borrador'}</span></div></div>
+            <div class="info-field"><label>Creada</label><div class="info-value">${fmtDate(camp.createdAt)}</div></div>
+            <div class="info-field"><label>Ejecución</label><div class="info-value">${fmtDate(camp.execDate)}</div></div>
+          </div>
+          ${camp.description?`<div class="divider"></div><div class="text-muted text-sm">${esc(camp.description)}</div>`:''}
+          <div class="divider"></div>
+          <div id="camp-stats" style="font-size:13.5px">
+            Contactos seleccionados: <strong>${campContacts.length}</strong>
+          </div>
+        </div>
+      </div>
+    `;
+
+    Views._campSearch = v => { searchQ=v; renderTable(); };
+    Views._campFilter = (v,key) => { if(key==='status') filterStatus=v; else filterTag=v; renderTable(); };
+    Views.toggleCampContact = async (campId, contactId, checked) => {
+      const c = await Data.getContact(contactId);
+      c.campaigns = c.campaigns||[];
+      if (checked) { if (!c.campaigns.includes(campId)) c.campaigns.push(campId); }
+      else { c.campaigns = c.campaigns.filter(x=>x!==campId); }
+      await Data.saveContact(c);
+      if (checked) Audit.log('campaign_exec', 'campaigns', campId, { contactId, contactName: c.nombre }).catch(()=>{});
+      campContacts = (await Data.getContacts()).filter(c2=>(c2.campaigns||[]).includes(campId));
+      document.getElementById('camp-stats').innerHTML = `Contactos seleccionados: <strong>${campContacts.length}</strong>`;
+    };
+    renderTable();
+  },
+
+  async exportCampaign(id) {
+    const all = await Data.getContacts();
+    const selected = all.filter(c=>(c.campaigns||[]).includes(id));
+    Export.toCSV(selected.map(c=>({ nombre:c.nombre, apellido:c.apellido, razon_social:c.razon_social, email:c.email, telefono:c.telefono, ciudad:c.ciudad, status:c.status })), 'campaña-'+id);
+    Toast.success('CSV exportado');
+  },
+
+  // ── CALENDAR / TASKS ──
+  async calendar() {
+    document.getElementById('page-title').textContent = 'Calendario & Tareas';
+    document.getElementById('topbar-actions').innerHTML = `<button class="btn btn-primary" onclick="Views.showTaskModal()">+ Nueva tarea</button>`;
+
+    let date = new Date();
+    let filterAgent = CONFIG.CURRENT_USER?.id || '';
+
+    const renderCal = async () => {
+      const tasks = await Data.getTasks(filterAgent ? { assignedTo: filterAgent } : {});
+      const year = date.getFullYear(), month = date.getMonth();
+      const firstDay = new Date(year, month, 1).getDay();
+      const daysInMonth = new Date(year, month+1, 0).getDate();
+      const today = new Date().toISOString().split('T')[0];
+      const monthName = date.toLocaleString('es-AR', { month: 'long', year: 'numeric' });
+
+      const tasksByDay = {};
+      tasks.forEach(t => {
+        const d = t.dueDate?.split('T')[0];
+        if (d) { tasksByDay[d] = tasksByDay[d]||[]; tasksByDay[d].push(t); }
+      });
+
+      const days = [];
+      // Pad start
+      for (let i=0; i<(firstDay===0?6:firstDay-1); i++) days.push(null);
+      for (let d=1; d<=daysInMonth; d++) days.push(d);
+
+      const pendingTasks = tasks.filter(t=>t.status!=='completada').slice(0,20);
+
+      document.getElementById('content').innerHTML = `
+        <div style="display:grid;grid-template-columns:1fr 320px;gap:20px">
+          <div>
+            <div class="cal-nav">
+              <button class="btn btn-ghost btn-icon" onclick="Views._calNav(-1)">‹</button>
+              <h3>${monthName.charAt(0).toUpperCase()+monthName.slice(1)}</h3>
+              <button class="btn btn-ghost btn-icon" onclick="Views._calNav(1)">›</button>
+              <button class="btn btn-secondary btn-sm" onclick="Views._calToday()">Hoy</button>
+              <select class="form-control" style="width:auto;margin-left:auto" id="agent-filter" onchange="Views._calAgent(this.value)">
+                <option value="">Todos los agentes</option>
+                ${(await Data.getUsers()).map(u=>`<option value="${u.id}" ${u.id===filterAgent?'selected':''}>${esc(u.name)}</option>`).join('')}
+              </select>
+            </div>
+            <div class="calendar-grid">
+              ${['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'].map(d=>`<div class="cal-header">${d}</div>`).join('')}
+              ${days.map(d=>{
+                if (!d) return '<div></div>';
+                const dateStr = `${year}-${String(month+1).padStart(2,'0')}-${String(d).padStart(2,'0')}`;
+                const dayTasks = tasksByDay[dateStr]||[];
+                const visible = dayTasks.slice(0,3);
+                const extra = dayTasks.length - visible.length;
+                return `<div class="cal-day${dateStr===today?' today':''}" onclick="Views._calSelectDay('${dateStr}')">
+                  <div class="day-num">${d}</div>
+                  ${visible.map(t => {
+                    const priClass = t.status==='completada' ? 'done' : `pri-${t.priority||'normal'}`;
+                    return `<div class="cal-task-card ${priClass}" title="${esc(t.title)}">${esc(t.title)}</div>`;
+                  }).join('')}
+                  ${extra>0 ? `<div class="cal-more">+${extra} más</div>` : ''}
+                </div>`;
+              }).join('')}
+            </div>
+          </div>
+
+          <div>
+            <div class="card" style="margin-bottom:16px">
+              <div class="card-header">
+                <span class="card-title">Tareas pendientes</span>
+              </div>
+              ${pendingTasks.length ? pendingTasks.map(t=>`
+                <div style="display:flex;align-items:flex-start;gap:8px;padding:8px 0;border-bottom:1px solid var(--border)">
+                  <span class="badge badge-${t.status}" style="margin-top:2px;flex-shrink:0">${t.status.replace('_',' ')}</span>
+                  <div style="flex:1;min-width:0">
+                    <div style="font-weight:500;font-size:13px">${esc(t.title)}</div>
+                    <div class="text-muted text-sm">${fmtDate(t.dueDate)} ${t.priority==='alta'?'🔴':t.priority==='normal'?'🟡':''}</div>
+                  </div>
+                  <button class="btn btn-ghost btn-sm" onclick="Views.markTaskDone('${t.id}')" title="Completar">✓</button>
+                </div>
+              `).join('') : '<div class="text-muted text-sm">No hay tareas pendientes.</div>'}
+            </div>
+          </div>
+        </div>
+        <div id="day-detail"></div>
+      `;
+
+      Views._calNav = diff => { date = new Date(year, month+diff, 1); renderCal(); };
+      Views._calToday = () => { date = new Date(); renderCal(); };
+      Views._calAgent = v => { filterAgent=v; renderCal(); };
+      Views._calSelectDay = async dayStr => {
+        const dayTasks = (await Data.getTasks(filterAgent?{assignedTo:filterAgent}:{})).filter(t=>t.dueDate?.startsWith(dayStr));
+        document.getElementById('day-detail').innerHTML = `
+          <div class="card" style="margin-top:16px">
+            <div class="card-header"><span class="card-title">Tareas del ${fmtDate(dayStr)}</span></div>
+            ${dayTasks.length ? dayTasks.map(t=>`
+              <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
+                <span class="badge badge-${t.status}">${t.status.replace('_',' ')}</span>
+                <span style="font-size:13.5px;flex:1">${esc(t.title)}</span>
+                <button class="btn btn-ghost btn-sm" onclick="Views.markTaskDone('${t.id}')">✓ Completar</button>
+              </div>`).join('')
+            : '<div class="text-muted text-sm">No hay tareas para este día.</div>'}
+          </div>`;
+      };
+    };
+
+    renderCal();
+    Views.markTaskDone = async id => {
+      const t = await DB.get('tasks', id);
+      if (t) { t.status='completada'; t.completedAt=now(); await Data.saveTask(t); }
+      renderCal();
+      Toast.success('Tarea completada');
+    };
+  },
+
+  // ── EXPORTS ──
+  async exports() {
+    if (!Auth.can('exports')) { Toast.error('Acceso restringido.'); Router.go('dashboard'); return; }
+    document.getElementById('page-title').textContent = 'Exportar datos';
+    document.getElementById('topbar-actions').innerHTML = '';
+    document.getElementById('content').innerHTML = `
+      <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:16px">
+        ${[
+          { title:'Todos los contactos', desc:'Exporta el listado completo de contactos.', icon:'👥', action:'Views.exportAll("contacts","contactos")' },
+          { title:'Prospectos', desc:'Sólo contactos con estado Prospecto.', icon:'🔍', action:'Views.exportFiltered("prospecto")' },
+          { title:'Clientes', desc:'Sólo contactos con estado Cliente.', icon:'⭐', action:'Views.exportFiltered("cliente")' },
+          { title:'Tareas pendientes', desc:'Exporta todas las tareas no completadas.', icon:'✅', action:'Views.exportAll("tasks","tareas")' },
+          { title:'JSON completo', desc:'Exporta todos los datos en formato JSON.', icon:'📦', action:'Views.exportFullJSON()' },
+        ].map(e=>`
+          <div class="card" style="cursor:pointer" onclick="${e.action}">
+            <div style="font-size:28px;margin-bottom:10px">${e.icon}</div>
+            <div class="card-title">${e.title}</div>
+            <div class="text-muted text-sm" style="margin-top:4px">${e.desc}</div>
+            <button class="btn btn-secondary btn-sm" style="margin-top:14px">⬇ Exportar CSV</button>
+          </div>
+        `).join('')}
+      </div>
+    `;
+  },
+
+  async exportAll(store, name) {
+    const data = await DB.getAll(store);
+    Export.toCSV(data, name); Toast.success('Exportado: '+name+'.csv');
+  },
+  async exportFiltered(status) {
+    const all = await Data.getContacts();
+    Export.toCSV(all.filter(c=>c.status===status), 'contactos_'+status);
+    Toast.success('Exportado');
+  },
+  async exportFullJSON() {
+    const data = {};
+    for (const store of ['contacts','gestiones','tasks','campaigns','tags','users']) {
+      data[store] = await DB.getAll(store);
+    }
+    Export.toJSON(data, 'synclickcrm_backup_'+new Date().toISOString().split('T')[0]);
+    Toast.success('Backup JSON exportado');
+  },
+
+  // ── CONFLICTS ──
+  async conflicts() {
+    document.getElementById('page-title').textContent = 'Conflictos de sincronización';
+    document.getElementById('topbar-actions').innerHTML = '';
+    const list = await Data.getConflicts();
+    document.getElementById('content').innerHTML = list.length ? `
+      <div class="mb-4">
+        <p class="text-muted text-sm">Estos registros fueron modificados tanto localmente como en el servidor. Elegí qué versión conservar.</p>
+      </div>
+      ${list.map(c=>`
+        <div class="conflict-item">
+          <div class="conflict-title">Conflicto en ${c.entity} · ID: ${c.entityId}</div>
+          <div class="conflict-detail">Detectado: ${fmtDatetime(c.ts)}</div>
+          <div style="display:flex;gap:8px;margin-top:10px">
+            <button class="btn btn-primary btn-sm" onclick="Data.resolveConflict('${c.id}','local').then(()=>Views.conflicts())">Usar versión local</button>
+            <button class="btn btn-secondary btn-sm" onclick="Data.resolveConflict('${c.id}','remote').then(()=>Views.conflicts())">Usar versión servidor</button>
+          </div>
+        </div>
+      `).join('')}
+    ` : `<div class="empty-state" style="padding-top:60px"><div class="empty-icon">✅</div><h3>Sin conflictos</h3><p>Todos los datos están sincronizados correctamente.</p></div>`;
+  },
+
+  // ── SETTINGS ──
+  async settings() {
+    if (!Auth.can('settings')) { Toast.error('Acceso restringido. Solo administradores.'); Router.go('dashboard'); return; }
+    document.getElementById('page-title').textContent = 'Configuración';
+    document.getElementById('topbar-actions').innerHTML = '';
+    const tags = await Data.getTags();
+    document.getElementById('content').innerHTML = `
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+        <div class="card">
+          <div class="card-title mb-4">Sincronización con Google Sheets</div>
+          <div class="form-group">
+            <label class="form-label">URL del Web App (Apps Script)</label>
+            <input class="form-control" id="gas-url" value="${esc(CONFIG.GAS_URL)}" placeholder="https://script.google.com/macros/s/…/exec">
+          </div>
+          <div class="text-muted text-sm mb-4">Desplegá tu Apps Script como Web App y pegá la URL aquí. Usá la URL que termina en <code>/exec</code>.</div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap">
+            <button class="btn btn-primary" onclick="Views.saveGasUrl()">💾 Guardar URL</button>
+            <button class="btn btn-secondary" onclick="Views.testGasConnection()">🔌 Probar conexión</button>
+          </div>
+          ${CONFIG.GAS_URL ? `
+          <div style="margin-top:14px;padding-top:14px;border-top:1px solid var(--border)">
+            <div class="form-label" style="margin-bottom:8px">Subir datos locales al servidor</div>
+            <div class="text-muted text-sm mb-4">Si es la primera vez que conectás, subí todos los datos locales al servidor para que queden respaldados en Google Sheets.</div>
+            <div style="display:flex;gap:8px;flex-wrap:wrap">
+              <button class="btn btn-secondary" id="push-all-btn" onclick="Views.pushAllToServer()">⬆ Subir todos los datos locales</button>
+              <button class="btn btn-ghost btn-sm" onclick="Views.runSyncDiagnostic()" style="font-size:11.5px">🔬 Diagnóstico de sync</button>
+            </div>
+          </div>` : ''}
+        </div>
+
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">Etiquetas</span>
+            <button class="btn btn-primary btn-sm" onclick="Views.showNewTagModal()">+ Nueva</button>
+          </div>
+          <div id="tags-list">
+            ${tags.map(t=>`
+              <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)">
+                <span class="tag-chip">${esc(t.name)}</span>
+                <button class="btn btn-danger btn-sm btn-icon ml-auto" onclick="Views.deleteTag('${t.id}')">✕</button>
+              </div>
+            `).join('') || '<div class="text-muted text-sm">No hay etiquetas creadas.</div>'}
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-title mb-4">Acerca de SynclickCRM</div>
+          <div class="text-muted text-sm">
+            <div style="margin-bottom:8px">Versión ${CONFIG.APP_VERSION}</div>
+            <div style="margin-bottom:8px">Almacenamiento local: IndexedDB</div>
+            <div style="margin-bottom:16px">Backend: Google Apps Script + Sheets</div>
+            <button class="btn btn-danger btn-sm" onclick="Views.clearLocalData()">⚠ Borrar datos locales</button>
+          </div>
+        </div>
+      </div>
+    `;
+  },
+
+  saveGasUrl() {
+    const url = document.getElementById('gas-url').value.trim();
+    if (url && !url.includes('/exec')) {
+      Toast.error('La URL debe terminar en /exec');
+      return;
+    }
+    CONFIG.GAS_URL = url;
+    localStorage.setItem('gas_url', url);
+    Toast.success('URL guardada.');
+    if (url) Sync.forceSync();
+    Views.settings();
+  },
+
+  async testGasConnection() {
+    const url = (document.getElementById('gas-url')?.value.trim()) || CONFIG.GAS_URL;
+    if (!url) { Toast.error('Ingresá la URL primero'); return; }
+
+    if (location.protocol === 'file:') {
+      this._showConnectionDiagnostic(url, 'file_protocol');
+      return;
+    }
+    if (url.includes('/dev')) {
+      this._showConnectionDiagnostic(url, 'dev_url');
+      return;
+    }
+    if (!url.includes('/exec')) {
+      Toast.error('La URL debe terminar en /exec');
+      return;
+    }
+
+    // GAS tiene un problema de CORS con fetch() por sus redirecciones internas.
+    // La forma más confiable de verificar es abrir la URL en una pestaña nueva.
+    Modal.open('Verificar conexión', `
+      <div style="padding:4px 0">
+        <div style="font-size:14px;font-weight:600;margin-bottom:10px">📋 Verificación manual</div>
+        <div style="font-size:13px;color:var(--text-2);line-height:1.7;margin-bottom:14px">
+          Google Apps Script tiene restricciones de CORS que impiden verificar la conexión
+          automáticamente desde el navegador. Para confirmar que tu servidor funciona:
+        </div>
+        <div style="background:var(--bg);border-radius:var(--radius-sm);padding:12px;border:1px solid var(--border);margin-bottom:14px">
+          <div style="font-size:11.5px;font-weight:600;color:var(--text-2);margin-bottom:8px">Paso 1 — Abrí esta URL en una pestaña nueva:</div>
+          <a href="${url}?action=ping" target="_blank"
+             style="display:inline-flex;align-items:center;gap:6px;background:var(--accent);color:#fff;padding:7px 14px;border-radius:var(--radius-sm);font-size:12.5px;font-weight:500;text-decoration:none">
+            🔗 Abrir URL del servidor →
+          </a>
+        </div>
+        <div style="background:var(--bg);border-radius:var(--radius-sm);padding:12px;border:1px solid var(--border);margin-bottom:14px">
+          <div style="font-size:11.5px;font-weight:600;color:var(--text-2);margin-bottom:6px">Paso 2 — Si ves esto, el servidor está bien:</div>
+          <code style="background:#0f172a;color:#4ade80;padding:8px 12px;border-radius:6px;display:block;font-size:12px">{"ok":true,"ts":"2026-..."}</code>
+        </div>
+        <div style="font-size:12.5px;color:var(--text-2);line-height:1.6">
+          ✅ Si ves el JSON → el servidor está OK, podés sincronizar normalmente.<br>
+          ❌ Si ves error de Google → revisá permisos de la implementación.
+        </div>
+      </div>
+    `, `<button class="btn btn-primary" onclick="Modal.close()">Entendido</button>`);
+  },
+
+  _showConnectionDiagnostic(url, type, detail) {
+    const causes = {
+      file_protocol: {
+        title: '⚠️ Archivo abierto localmente (file://)',
+        msg: `El navegador bloquea todas las conexiones externas cuando abrís el archivo con doble click.<br><br>
+          <strong>Soluciones:</strong><br>
+          1. Subí el archivo a un hosting (Netlify, GitHub Pages)<br>
+          2. Usá un servidor local: abrí una terminal en la carpeta del archivo y ejecutá:<br>
+          <code style="background:#1e293b;color:#e2e8f0;padding:4px 8px;border-radius:4px;display:inline-block;margin-top:6px">python3 -m http.server 8080</code><br>
+          <span style="font-size:11px;color:var(--text-3)">Luego abrí: http://localhost:8080</span>`,
+      },
+      dev_url: {
+        title: '⚠️ URL incorrecta (/dev en lugar de /exec)',
+        msg: `La URL que pegaste contiene <code>/dev</code> — esa URL requiere que hayas iniciado sesión en Google y no funciona para uso general.<br><br>
+          <strong>Solución:</strong> En Apps Script → Implementar → Administrar implementaciones, copiá la URL que termina en <code>/exec</code>`,
+      },
+      http_error: {
+        title: `❌ Error HTTP ${detail}`,
+        msg: `El servidor respondió con código ${detail}.<br><br>
+          <strong>Posibles causas:</strong><br>
+          • La implementación fue borrada o expiró<br>
+          • El acceso no está configurado como "Cualquiera"<br><br>
+          <strong>Solución:</strong> Hacé una nueva implementación en Apps Script.`,
+      },
+      not_json: {
+        title: '⚠️ Respuesta inesperada del servidor',
+        msg: `El servidor respondió pero no es JSON válido. Puede que Apps Script esté mostrando un error interno.<br><br>
+          <strong>Respuesta recibida:</strong><br>
+          <code style="font-size:11px;word-break:break-all">${detail}</code><br><br>
+          Revisá los logs en Apps Script → Ejecuciones.`,
+      },
+      fetch_error: {
+        title: '❌ No se pudo conectar al servidor',
+        msg: `Error: <code>${detail}</code><br><br>
+          <strong>Checklist:</strong><br>
+          ✓ ¿La URL termina en <code>/exec</code>?<br>
+          ✓ ¿La implementación está publicada como "Cualquiera puede acceder"?<br>
+          ✓ ¿Tenés conexión a internet?<br>
+          ✓ ¿El archivo está en un servidor (no abierto con file://)?<br><br>
+          <strong>Para verificar manualmente:</strong><br>
+          <a href="${url}?action=ping" target="_blank" style="color:var(--accent)">Abrí este link en una nueva pestaña →</a>`,
+      },
+    };
+
+    const info = causes[type] || { title: 'Error de conexión', msg: detail };
+
+    Modal.open('Diagnóstico de conexión', `
+      <div style="padding:4px 0">
+        <div style="font-size:15px;font-weight:700;margin-bottom:12px">${info.title}</div>
+        <div style="font-size:13px;color:var(--text-2);line-height:1.7">${info.msg}</div>
+        ${type === 'fetch_error' || type === 'not_json' ? `
+          <div style="margin-top:16px;padding:10px 12px;background:var(--bg);border-radius:var(--radius-sm);border:1px solid var(--border)">
+            <div style="font-size:11.5px;font-weight:600;color:var(--text-2);margin-bottom:4px">URL configurada:</div>
+            <div style="font-size:11px;word-break:break-all;color:var(--text-3)">${url}</div>
+          </div>` : ''}
+      </div>
+    `, `<button class="btn btn-primary" onclick="Modal.close()">Entendido</button>`);
+  },
+
+  async pushAllToServer() {
+    const btn = document.getElementById('push-all-btn');
+    if (btn) { btn.disabled = true; btn.textContent = '⬆ Subiendo…'; }
+    try {
+      const total = await Sync.pushAllLocalData();
+      Toast.success(`✅ ${total} registros enviados al servidor`);
+    } catch(e) {
+      Toast.error('Error al subir datos: ' + e.message);
+    }
+    if (btn) { btn.disabled = false; btn.textContent = '⬆ Subir todos los datos locales'; }
+  },
+
+  async runSyncDiagnostic() {
+    Modal.open('🔬 Diagnóstico de sincronización', `
+      <div style="text-align:center;padding:20px 0">
+        <div style="font-size:24px;margin-bottom:8px">⏳</div>
+        <div style="color:var(--text-2)">Probando escritura y lectura con GAS…</div>
+      </div>
+    `, '');
+
+    const results = await Sync.debugSync();
+
+    let html = '<div style="font-size:13px">';
+    let allOk = true;
+
+    for (const [method, res] of Object.entries(results)) {
+      const color = res.ok ? '#16a34a' : '#ef4444';
+      html += `
+        <div style="margin-bottom:12px;padding:10px 12px;background:var(--bg);border-radius:var(--radius-sm);border-left:3px solid ${color}">
+          <div style="font-weight:700;margin-bottom:4px;color:${color}">${method}</div>
+          <div style="font-size:11.5px;color:var(--text-2)">${res.detail}</div>
+        </div>`;
+      if (!res.ok) allOk = false;
+    }
+
+    if (allOk) {
+      html += `<div style="padding:10px 12px;background:#dcfce7;border-radius:var(--radius-sm);color:#15803d;font-weight:600">
+        ✅ Todo funciona. Podés subir los datos.
+      </div>`;
+    } else {
+      html += `<div style="padding:10px 12px;background:#fef2f2;border-radius:var(--radius-sm);color:#dc2626;font-size:12.5px">
+        <strong>Verificá en Apps Script:</strong><br>
+        • Implementar → Administrar implementaciones → acceso = "Cualquiera"<br>
+        • Ejecutar como: Tu cuenta Google<br>
+        • Hiciste nueva implementación luego del último cambio en Code.gs
+      </div>`;
+    }
+
+    html += '</div>';
+    document.querySelector('#modal-body').innerHTML = html;
+    document.querySelector('#modal-footer').innerHTML = `<button class="btn btn-primary" onclick="Modal.close()">Cerrar</button>`;
+  },
+
+  showNewTagModal() {
+    Modal.open('Nueva etiqueta', `
+      <div class="form-group"><label class="form-label">Nombre de la etiqueta</label><input class="form-control" id="nt-name" placeholder="Ej: VIP, zona_norte, potencial"></div>
+    `, `
+      <button class="btn btn-secondary" onclick="Modal.close()">Cancelar</button>
+      <button class="btn btn-primary" onclick="Views.saveNewTag()">Crear</button>
+    `);
+  },
+
+  async saveNewTag() {
+    const name = document.getElementById('nt-name').value.trim();
+    if (!name) return Toast.error('Ingresá un nombre');
+    await Data.saveTag({ name });
+    Modal.close(); Toast.success('Etiqueta creada'); Views.settings();
+  },
+
+  async deleteTag(id) {
+    await DB.del('tags', id);
+    Toast.success('Etiqueta eliminada'); Views.settings();
+  },
+
+  // ── IMPORT ──
+  async import() {
+    if (!Auth.can('import')) { Toast.error('Acceso restringido. Necesitás rol Supervisor o Admin.'); Router.go('dashboard'); return; }
+    document.getElementById('page-title').textContent = 'Importación masiva';
+    document.getElementById('topbar-actions').innerHTML = '';
+    document.getElementById('content').innerHTML = `
+      <div style="display:grid;grid-template-columns:1fr 340px;gap:20px;align-items:start">
+        <div>
+          <div class="card" id="import-step-1">
+            <div class="card-title mb-4">Paso 1 — Seleccioná o arrastrá tu archivo CSV</div>
+            <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
+              <input type="file" id="file-input" accept=".csv,.txt" onchange="Views.handleImportFile(this.files[0])">
+              <div class="dz-icon">📥</div>
+              <h3>Arrastrá tu CSV aquí</h3>
+              <p>O hacé clic para seleccionar. Formatos: CSV, TXT<br>Separador automático: coma o punto y coma</p>
+            </div>
+          </div>
+
+          <div class="card hidden" id="import-step-2">
+            <div class="card-header">
+              <span class="card-title">Paso 2 — Mapeá las columnas</span>
+              <span class="text-muted text-sm" id="import-file-info"></span>
+            </div>
+            <p class="text-muted text-sm mb-4">Asigná cada columna del CSV al campo correspondiente. Las columnas con ⚡ fueron detectadas automáticamente.</p>
+            <div id="col-map-table"></div>
+            <div style="margin-top:16px;display:flex;gap:8px">
+              <button class="btn btn-secondary" onclick="Views.resetImport()">← Volver</button>
+              <button class="btn btn-primary" onclick="Views.showImportPreview()">Ver previsualización →</button>
+            </div>
+          </div>
+
+          <div class="card hidden" id="import-step-3">
+            <div class="card-header">
+              <span class="card-title">Paso 3 — Previsualización</span>
+              <span id="import-preview-count" class="text-muted text-sm"></span>
+            </div>
+            <div id="import-preview-table" style="max-height:340px;overflow-y:auto"></div>
+            <div style="margin-top:16px;display:flex;gap:8px;align-items:center">
+              <button class="btn btn-secondary" onclick="Views.showImportMapping()">← Ajustar mapeo</button>
+              <button class="btn btn-primary" id="import-execute-btn" onclick="Views.executeImport()">⬆ Importar contactos</button>
+              <span id="import-progress-text" class="text-muted text-sm"></span>
+            </div>
+            <div class="import-progress-bar hidden" id="import-pbar">
+              <div class="import-progress-fill" id="import-pfill"></div>
+            </div>
+          </div>
+
+          <div class="card hidden" id="import-step-4">
+            <div style="text-align:center;padding:24px 0">
+              <div style="font-size:48px;margin-bottom:12px">✅</div>
+              <div style="font-family:var(--font-head);font-size:20px;font-weight:800;margin-bottom:8px">Importación completada</div>
+              <div id="import-result-detail" class="text-muted text-sm" style="margin-bottom:20px"></div>
+              <div style="display:flex;gap:8px;justify-content:center">
+                <button class="btn btn-secondary" onclick="Views.resetImport()">Importar otro archivo</button>
+                <button class="btn btn-primary" onclick="Router.go('contacts')">Ver contactos →</button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div>
+          <div class="card">
+            <div class="card-title mb-4">📖 Formato esperado</div>
+            <div class="text-muted text-sm" style="line-height:1.7">
+              <div style="margin-bottom:10px">El CSV puede usar <strong>coma (,)</strong> o <strong>punto y coma (;)</strong> como separador. Se detecta automáticamente.</div>
+              <div style="margin-bottom:8px;font-weight:600">Columnas reconocidas automáticamente:</div>
+              ${Importer.CONTACT_FIELDS.filter(f=>f.key!=='_skip').map(f=>`<div style="display:flex;gap:6px;margin-bottom:3px"><code style="background:var(--bg);padding:1px 5px;border-radius:4px;font-size:11px">${f.key}</code><span>${f.label}</span></div>`).join('')}
+              <div class="divider"></div>
+              <div style="margin-bottom:8px;font-weight:600">Ejemplo de fila:</div>
+              <code style="background:var(--bg);padding:8px;border-radius:6px;display:block;font-size:11px;word-break:break-all">Juan,Pérez,Empresa SA,juan@mail.com,1155443322,prospecto</code>
+            </div>
+          </div>
+
+          <div class="card" style="margin-top:16px">
+            <div class="card-title mb-4">📥 Descargar template</div>
+            <p class="text-muted text-sm mb-4">Descargá un CSV de ejemplo con las columnas correctas.</p>
+            <button class="btn btn-secondary w-full" onclick="Views.downloadImportTemplate()" style="justify-content:center">⬇ Descargar template CSV</button>
+          </div>
+        </div>
+      </div>
+    `;
+
+    // Drag and drop
+    const dz = document.getElementById('drop-zone');
+    dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag-over'); });
+    dz.addEventListener('dragleave', () => dz.classList.remove('drag-over'));
+    dz.addEventListener('drop', e => { e.preventDefault(); dz.classList.remove('drag-over'); const f = e.dataTransfer.files[0]; if (f) Views.handleImportFile(f); });
+
+    Views._importData = null;
+  },
+
+  downloadImportTemplate() {
+    const header = 'nombre,apellido,razon_social,email,telefono,cuit,ciudad,status,condicion,tags';
+    const example = 'Juan,Pérez,Empresa SA,juan@empresa.com,1155443322,20-12345678-9,Buenos Aires,prospecto,Monotributista,VIP|potencial';
+    const blob = new Blob([header + '\n' + example + '\n'], { type: 'text/csv;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = 'template_contactos.csv'; a.click();
+    URL.revokeObjectURL(url);
+    Toast.success('Template descargado');
+  },
+
+  handleImportFile(file) {
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+      try {
+        const { headers, rows } = Importer.parseCSV(e.target.result);
+        Views._importData = { headers, rows, mapping: Importer.autoMap(headers), file };
+        Views.showImportMapping();
+      } catch(err) { Toast.error('Error al leer el CSV: ' + err.message); }
+    };
+    reader.readAsText(file, 'UTF-8');
+  },
+
+  showImportMapping() {
+    const { headers, rows, mapping, file } = Views._importData;
+    document.getElementById('import-step-1').classList.add('hidden');
+    document.getElementById('import-step-3').classList.add('hidden');
+    document.getElementById('import-step-4').classList.add('hidden');
+    document.getElementById('import-step-2').classList.remove('hidden');
+    document.getElementById('import-file-info').textContent = `${file.name} · ${rows.length} filas`;
+
+    const autoDetected = Importer.autoMap(headers);
+    document.getElementById('col-map-table').innerHTML = `
+      <table style="width:100%;border-collapse:collapse">
+        <thead><tr>
+          <th style="text-align:left;padding:8px;border-bottom:2px solid var(--border);font-size:11.5px;color:var(--text-2);text-transform:uppercase">Columna CSV</th>
+          <th style="text-align:left;padding:8px;border-bottom:2px solid var(--border);font-size:11.5px;color:var(--text-2);text-transform:uppercase">Muestra</th>
+          <th style="text-align:left;padding:8px;border-bottom:2px solid var(--border);font-size:11.5px;color:var(--text-2);text-transform:uppercase">Campo en SynclickCRM</th>
+        </tr></thead>
+        <tbody>${headers.map(h => {
+          const sample = rows.slice(0,3).map(r=>r[h]).filter(Boolean).join(', ');
+          const isAuto = autoDetected[h] !== '_skip';
+          return `<tr>
+            <td style="padding:8px;border-bottom:1px solid var(--border);font-weight:600;font-size:13px">${esc(h)} ${isAuto?'<span title="Detectado automáticamente" style="color:var(--accent)">⚡</span>':''}</td>
+            <td style="padding:8px;border-bottom:1px solid var(--border);font-size:12px;color:var(--text-2);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(sample)}</td>
+            <td style="padding:8px;border-bottom:1px solid var(--border)">
+              <select class="col-map-select" data-col="${esc(h)}" onchange="Views._importData.mapping['${esc(h)}']=this.value">
+                ${Importer.CONTACT_FIELDS.map(f=>`<option value="${f.key}" ${mapping[h]===f.key?'selected':''}>${f.label}</option>`).join('')}
+              </select>
+            </td>
+          </tr>`;
+        }).join('')}</tbody>
+      </table>
+    `;
+  },
+
+  showImportPreview() {
+    const { rows, mapping } = Views._importData;
+    document.getElementById('import-step-2').classList.add('hidden');
+    document.getElementById('import-step-3').classList.remove('hidden');
+
+    const hasNombre = Object.values(mapping).includes('nombre');
+    if (!hasNombre) return Toast.error('Debés mapear al menos la columna "Nombre"');
+
+    const preview = rows.slice(0, 50);
+    let ok = 0, warn = 0, err = 0;
+    const fields = Importer.CONTACT_FIELDS.filter(f => f.key !== '_skip' && Object.values(mapping).includes(f.key));
+
+    document.getElementById('import-preview-count').textContent = `Mostrando ${preview.length} de ${rows.length} filas`;
+    document.getElementById('import-preview-table').innerHTML = `
+      <table style="width:100%;border-collapse:collapse">
+        <thead><tr>
+          <th style="padding:6px 8px;border-bottom:2px solid var(--border);font-size:11px;color:var(--text-2);text-transform:uppercase">Estado</th>
+          ${fields.map(f=>`<th style="padding:6px 8px;border-bottom:2px solid var(--border);font-size:11px;color:var(--text-2);text-transform:uppercase">${f.label}</th>`).join('')}
+        </tr></thead>
+        <tbody>${preview.map(row => {
+          const { contact, warnings, valid } = Importer.transformRow(row, mapping);
+          if (!valid) err++;
+          else if (warnings.length) warn++;
+          else ok++;
+          const cls = !valid ? 'row-err' : warnings.length ? 'row-warn' : 'row-ok';
+          const icon = !valid ? '❌' : warnings.length ? '⚠️' : '✅';
+          return `<tr class="import-row-preview ${cls}">
+            <td style="padding:5px 8px;text-align:center">${icon}</td>
+            ${fields.map(f=>`<td style="padding:5px 8px;font-size:12px;white-space:nowrap;overflow:hidden;max-width:150px;text-overflow:ellipsis">${esc(contact[f.key]||'')}</td>`).join('')}
+          </tr>`;
+        }).join('')}</tbody>
+      </table>
+    `;
+
+    document.getElementById('import-execute-btn').textContent = `⬆ Importar ${rows.length} contactos`;
+    document.getElementById('import-progress-text').textContent = `✅ ${ok} ok · ⚠️ ${warn} con advertencias · ❌ ${err} sin nombre (se omitirán)`;
+  },
+
+  async executeImport() {
+    const { rows, mapping } = Views._importData;
+    document.getElementById('import-execute-btn').disabled = true;
+    document.getElementById('import-pbar').classList.remove('hidden');
+    const fill = document.getElementById('import-pfill');
+    const text = document.getElementById('import-progress-text');
+
+    const result = await Importer.importBatch(rows, mapping, (done, total, ok, skipped, errors) => {
+      const pct = Math.round((done / total) * 100);
+      fill.style.width = pct + '%';
+      text.textContent = `${done}/${total} · ✅ ${ok} importados · ⏭ ${skipped} omitidos · ❌ ${errors} errores`;
+    });
+
+    document.getElementById('import-step-3').classList.add('hidden');
+    document.getElementById('import-step-4').classList.remove('hidden');
+    document.getElementById('import-result-detail').innerHTML =
+      `<strong style="color:var(--success);font-size:16px">${result.ok} contactos importados</strong><br>
+       ${result.skipped ? `${result.skipped} filas omitidas (sin nombre)` : ''}
+       ${result.errors ? ` · ${result.errors} errores` : ''}`;
+    Toast.success(`Importación completa: ${result.ok} contactos`);
+  },
+
+  resetImport() {
+    Views._importData = null;
+    Views.import();
+  },
+
+  // ── ANALYTICS ──
+  async analytics() {
+    if (!Auth.can('analytics')) { Toast.error('Acceso restringido. Necesitás rol Supervisor o Admin.'); Router.go('dashboard'); return; }
+    document.getElementById('page-title').textContent = 'Métricas & Actividad';
+    document.getElementById('topbar-actions').innerHTML = '';
+
+    let days = 30;
+    const render = async () => {
+      const stats = await Audit.getStats(days);
+      const contacts = await Data.getContacts();
+      const tasks = await DB.getAll('tasks');
+
+      // Build day-by-day chart data (sorted ascending)
+      const dayEntries = Object.entries(stats.byDay).sort((a,b) => a[0].localeCompare(b[0]));
+      const maxDay = Math.max(...dayEntries.map(([,v])=>v), 1);
+      const chartW = 600, chartH = 80;
+      const barW = Math.max(4, Math.floor((chartW - 20) / dayEntries.length) - 2);
+
+      // Action breakdown counts
+      const ac = stats.byAction;
+      const creates = ac.create || 0;
+      const updates = ac.update || 0;
+      const deletes = ac.delete || 0;
+      const campCreates = ac.campaign_create || 0;
+      const campExecs = ac.campaign_exec || 0;
+      const imports = ac.import || 0;
+      const logins = ac.login || 0;
+      const totalActions = stats.total;
+
+      document.getElementById('content').innerHTML = `
+        <div class="date-range-pills">
+          ${[7,14,30,60,90].map(d=>`<span class="date-pill${days===d?' active':''}" onclick="Views._analyticsSetDays(${d})">${d} días</span>`).join('')}
+          <span class="text-muted text-sm" style="margin-left:auto;align-self:center">${totalActions} acciones registradas</span>
+        </div>
+
+        <!-- KPI Row -->
+        <div style="display:grid;grid-template-columns:repeat(6,1fr);gap:12px;margin-bottom:20px">
+          ${[
+            { icon:'➕', val: creates, label:'Contactos creados', color:'var(--success)' },
+            { icon:'✏️', val: updates, label:'Modificaciones', color:'var(--accent2)' },
+            { icon:'🗑️', val: deletes, label:'Eliminaciones', color:'var(--danger)' },
+            { icon:'📢', val: campExecs, label:'Ejecuciones campaña', color:'var(--accent)' },
+            { icon:'📥', val: imports, label:'Importaciones', color:'var(--warning)' },
+            { icon:'🔑', val: logins, label:'Ingresos al sistema', color:'#8b5cf6' },
+          ].map(k=>`
+            <div class="metric-card" style="border-top:3px solid ${k.color}">
+              <div style="font-size:20px">${k.icon}</div>
+              <div class="metric-value" style="color:${k.color}">${k.val}</div>
+              <div class="metric-label">${k.label}</div>
+            </div>
+          `).join('')}
+        </div>
+
+        <!-- Charts Row -->
+        <div style="display:grid;grid-template-columns:2fr 1fr;gap:16px;margin-bottom:20px">
+          <div class="card">
+            <div class="card-title mb-4">Actividad diaria (últimos ${days} días)</div>
+            <div class="chart-wrap" style="min-height:${chartH+30}px">
+              <div class="chart-tooltip" id="chart-tip"></div>
+              <svg class="chart-svg" viewBox="0 0 ${chartW} ${chartH+24}" style="height:${chartH+24}px">
+                ${dayEntries.map(([date, count], i) => {
+                  const barH = count === 0 ? 2 : Math.max(4, Math.round((count / maxDay) * chartH));
+                  const x = 10 + i * (barW + 2);
+                  const y = chartH - barH;
+                  const isToday = date === new Date().toISOString().split('T')[0];
+                  return `<rect class="chart-bar" x="${x}" y="${y}" width="${barW}" height="${barH}"
+                    fill="${isToday ? 'var(--accent)' : 'var(--accent2)'}" rx="2"
+                    data-date="${date}" data-count="${count}"
+                    onmouseenter="Views._showChartTip(event,'${date}',${count})"
+                    onmouseleave="Views._hideChartTip()"/>
+                    ${i % Math.ceil(dayEntries.length/8) === 0 ? `<text x="${x}" y="${chartH+16}" font-size="9" fill="var(--text-3)" text-anchor="middle">${date.slice(5)}</text>` : ''}`;
+                }).join('')}
+                <line x1="10" y1="${chartH}" x2="${chartW-10}" y2="${chartH}" stroke="var(--border)" stroke-width="1"/>
+              </svg>
+            </div>
+            <div class="chart-legend">
+              <div class="legend-item"><div class="legend-dot" style="background:var(--accent2)"></div>Días anteriores</div>
+              <div class="legend-item"><div class="legend-dot" style="background:var(--accent)"></div>Hoy</div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-title mb-4">Distribución de acciones</div>
+            ${[
+              { label:'Creaciones', val: creates, total: totalActions, color:'#22c55e' },
+              { label:'Modificaciones', val: updates, total: totalActions, color:'var(--accent2)' },
+              { label:'Campañas', val: campCreates + campExecs, total: totalActions, color:'var(--accent)' },
+              { label:'Importaciones', val: imports, total: totalActions, color:'var(--warning)' },
+              { label:'Eliminaciones', val: deletes, total: totalActions, color:'var(--danger)' },
+            ].map(item => {
+              const pct = totalActions ? Math.round((item.val / totalActions) * 100) : 0;
+              return `<div style="margin-bottom:10px">
+                <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:3px">
+                  <span>${item.label}</span><span style="font-weight:700">${item.val} <span style="color:var(--text-3);font-weight:400">(${pct}%)</span></span>
+                </div>
+                <div style="height:7px;background:var(--bg);border-radius:99px;overflow:hidden">
+                  <div style="height:100%;width:${pct}%;background:${item.color};border-radius:99px;transition:width .6s cubic-bezier(.16,1,.3,1)"></div>
+                </div>
+              </div>`;
+            }).join('')}
+          </div>
+        </div>
+
+        <!-- Agents + Contacts Status Row -->
+        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:16px;margin-bottom:20px">
+          <div class="card">
+            <div class="card-title mb-4">🏆 Ranking de agentes</div>
+            ${stats.byAgent.length ? stats.byAgent.slice(0,8).map((a, i) => {
+              const maxCount = stats.byAgent[0].count || 1;
+              const pct = Math.round((a.count / maxCount) * 100);
+              const medals = ['gold','silver','bronze'];
+              return `<div class="agent-rank">
+                <div class="rank-num ${medals[i]||''}">${i+1}</div>
+                <div class="rank-bar-wrap">
+                  <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:3px">
+                    <span style="font-weight:500">${esc(a.name)}</span>
+                    <span style="color:var(--text-2);font-size:11.5px">+${a.creates} creados · ✏${a.updates}</span>
+                  </div>
+                  <div style="height:5px;background:var(--bg);border-radius:99px;overflow:hidden">
+                    <div class="rank-bar" style="width:${pct}%"></div>
+                  </div>
+                </div>
+                <span class="rank-count">${a.count}</span>
+              </div>`;
+            }).join('') : '<div class="text-muted text-sm">Sin actividad registrada.</div>'}
+          </div>
+
+          <div class="card">
+            <div class="card-title mb-4">📊 Estado de contactos</div>
+            ${(() => {
+              const total = contacts.length || 1;
+              const groups = [
+                { label:'Clientes', count: contacts.filter(c=>c.status==='cliente').length, color:'#22c55e' },
+                { label:'Prospectos', count: contacts.filter(c=>c.status==='prospecto').length, color:'var(--accent2)' },
+                { label:'Inactivos', count: contacts.filter(c=>c.status==='inactivo').length, color:'var(--text-3)' },
+                { label:'Otros', count: contacts.filter(c=>!['cliente','prospecto','inactivo'].includes(c.status)).length, color:'var(--warning)' },
+              ];
+              return groups.map(g => {
+                const pct = Math.round((g.count / total) * 100);
+                return `<div style="margin-bottom:10px">
+                  <div style="display:flex;justify-content:space-between;font-size:12.5px;margin-bottom:3px">
+                    <span>${g.label}</span><span style="font-weight:700">${g.count} <span style="color:var(--text-3);font-weight:400">(${pct}%)</span></span>
+                  </div>
+                  <div style="height:7px;background:var(--bg);border-radius:99px;overflow:hidden">
+                    <div style="height:100%;width:${pct}%;background:${g.color};border-radius:99px;transition:width .6s cubic-bezier(.16,1,.3,1)"></div>
+                  </div>
+                </div>`;
+              }).join('');
+            })()}
+            <div class="divider"></div>
+            <div style="display:flex;justify-content:space-between;font-size:13px">
+              <span class="text-muted">Total contactos</span>
+              <span style="font-weight:700;font-family:var(--font-head);font-size:16px">${contacts.length}</span>
+            </div>
+          </div>
+
+          <div class="card">
+            <div class="card-title mb-4">📋 Campañas</div>
+            ${stats.campStats.length ? stats.campStats.slice(0,6).map(c => `
+              <div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--border)">
+                <span class="badge badge-${c.status==='activa'?'cliente':c.status==='cerrada'?'inactivo':'prospecto'}" style="flex-shrink:0">${c.status||'borrador'}</span>
+                <div style="flex:1;min-width:0">
+                  <div style="font-weight:500;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(c.name)}</div>
+                  <div class="text-muted text-sm">${c.contactCount} contactos · ${c.executions} exec.</div>
+                </div>
+              </div>
+            `).join('') : '<div class="text-muted text-sm">Sin campañas creadas.</div>'}
+            <div class="divider"></div>
+            <div style="display:flex;justify-content:space-between;font-size:13px">
+              <span class="text-muted">Tareas completadas</span>
+              <span style="font-weight:700">${tasks.filter(t=>t.status==='completada').length} / ${tasks.length}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Audit Log -->
+        <div class="card">
+          <div class="card-header">
+            <span class="card-title">📜 Registro de actividad</span>
+            <div style="display:flex;gap:8px;align-items:center">
+              <select class="form-control" style="width:auto;font-size:12.5px" id="audit-filter-user" onchange="Views._analyticsFilterAudit()">
+                <option value="">Todos los agentes</option>
+                ${(await DB.getAll('users')).map(u=>`<option value="${u.id}">${esc(u.name)}</option>`).join('')}
+              </select>
+              <select class="form-control" style="width:auto;font-size:12.5px" id="audit-filter-action" onchange="Views._analyticsFilterAudit()">
+                <option value="">Todas las acciones</option>
+                ${['create','update','delete','campaign_create','campaign_exec','import','login'].map(a=>`<option value="${a}">${a.replace('_',' ')}</option>`).join('')}
+              </select>
+            </div>
+          </div>
+          <div id="audit-log-list">
+            ${Views._renderAuditList(stats.allEntries.slice(0,50))}
+          </div>
+          ${stats.allEntries.length > 50 ? `<div class="text-muted text-sm" style="text-align:center;padding:10px">Mostrando 50 de ${stats.allEntries.length} registros</div>` : ''}
+        </div>
+      `;
+
+      // Wire up filter + day handlers
+      Views._analyticsSetDays = async d => { days = d; await render(); };
+      Views._analyticsFilterAudit = async () => {
+        const userId = document.getElementById('audit-filter-user')?.value || '';
+        const action = document.getElementById('audit-filter-action')?.value || '';
+        const filtered = await Audit.getAll({ days, userId, action });
+        document.getElementById('audit-log-list').innerHTML = Views._renderAuditList(filtered.slice(0,80));
+      };
+      Views._showChartTip = (e, date, count) => {
+        const tip = document.getElementById('chart-tip');
+        tip.textContent = `${date}: ${count} acciones`;
+        tip.style.left = (e.offsetX + 10) + 'px';
+        tip.style.top = (e.offsetY - 30) + 'px';
+        tip.classList.add('visible');
+      };
+      Views._hideChartTip = () => document.getElementById('chart-tip')?.classList.remove('visible');
+    };
+
+    await render();
+  },
+
+  _renderAuditList(entries) {
+    if (!entries.length) return '<div class="empty-state"><div class="empty-icon">📋</div><p>Sin registros para el período seleccionado.</p></div>';
+    const typeClass = { create:'audit-create', update:'audit-update', delete:'audit-delete', campaign_exec:'audit-campaign', campaign_create:'audit-campaign', import:'audit-import', login:'audit-login', logout:'audit-login' };
+    const icons = Audit.ICONS;
+    return entries.map(e => {
+      let detail = '';
+      try { const d = JSON.parse(e.detail||'{}'); detail = d.nombre ? `${d.nombre} ${d.apellido||''}` : d.name || d.username || ''; } catch {}
+      return `<div class="audit-row">
+        <div class="audit-icon ${typeClass[e.action]||'audit-update'}">${icons[e.action]||'•'}</div>
+        <div class="audit-detail">
+          <div class="audit-title">${esc(e.userName)} — <span style="color:var(--text-2)">${e.action.replace('_',' ')}</span> ${detail?`<span style="color:var(--text-3)">· ${esc(detail)}</span>`:''}</div>
+          <div class="audit-meta">${fmtDatetime(e.ts)} · ${e.entity}</div>
+        </div>
+      </div>`;
+    }).join('');
+  },
+
+  async clearLocalData() {
+    if (!confirm('¿Seguro que querés borrar todos los datos locales? Se perderán cambios no sincronizados.')) return;
+    indexedDB.deleteDatabase('synclickcrm_v2');
+    localStorage.clear();
+    Toast.info('Datos borrados. Recargando…');
+    setTimeout(() => location.reload(), 1500);
+  },
+};
+
+// ════════════════════════════════════════════
+// ROUTER
+// ════════════════════════════════════════════
+const Router = {
+  routes: {
+    dashboard: Views.dashboard,
+    contacts: Views.contacts,
+    contact: Views.contact,
+    campaigns: (p) => p?.id ? Views.campaignDetail(p.id) : Views.campaigns(),
+    calendar: Views.calendar,
+    exports: Views.exports,
+    import: Views.import,
+    analytics: Views.analytics,
+    conflicts: Views.conflicts,
+    users: Views.users,
+    settings: Views.settings,
+  },
+
+  go(view, params) {
+    const hash = params?.id ? `#${view}/${params.id}` : `#${view}`;
+    try {
+      history.pushState({ view, params }, '', hash);
+    } catch(e) {
+      // Fallback for restricted iframe environments (e.g. about:srcdoc)
+      location.hash = hash;
+    }
+    this.render(view, params);
+  },
+
+  render(view, params) {
+    const hash = location.hash.slice(1);
+    const [v, id] = hash.split('/');
+    const activeView = view || v || 'dashboard';
+    const activeParams = params || (id ? { id } : {});
+
+    document.querySelectorAll('.nav-item').forEach(el => {
+      const elView = el.getAttribute('data-view');
+      el.classList.toggle('active', elView === activeView || (activeView === 'contact' && elView === 'contacts') || (activeView === 'campaigns' && elView === 'campaigns' && !id));
+    });
+
+    const fn = this.routes[activeView];
+    if (fn) fn.call(Views, activeParams);
+  }
+};
+
+window.addEventListener('popstate', () => Router.render());
+window.addEventListener('hashchange', () => Router.render());
+document.querySelectorAll('.nav-item[data-view]').forEach(el => {
+  el.addEventListener('click', e => {
+    e.preventDefault();
+    Router.go(el.getAttribute('data-view'));
+  });
+});
+
+// ════════════════════════════════════════════
+// INIT
+// ════════════════════════════════════════════
+async function init() {
+  await DB.open();
+
+  // Seed demo contacts and default admin user on first run
+  const users = await DB.getAll('users');
+  if (!users.length) await seedDefaultData();
+
+  const contacts = await DB.getAll('contacts');
+  if (!contacts.length) await seedDemoContacts();
+
+  // Check for existing valid session
+  const hasSession = Auth.checkSession();
+
+  if (hasSession) {
+    // Hide login screen immediately
+    const ls = document.getElementById('login-screen');
+    ls.style.display = 'none';
+    await Sync.init();
+    Router.render();
+  } else {
+    // Show login, still init sync silently
+    Sync.init();
+  }
+}
+
+async function seedDefaultData() {
+  // Create default admin user: admin / admin123
+  await Auth.createUser({
+    username: 'admin',
+    name: 'Administrador',
+    role: 'admin',
+    password: 'admin123',
+    active: true,
+  });
+  // Create a sample supervisor and agente
+  await Auth.createUser({
+    username: 'supervisor1',
+    name: 'Carlos Supervisor',
+    role: 'supervisor',
+    password: 'super123',
+    active: true,
+  });
+  await Auth.createUser({
+    username: 'agente1',
+    name: 'Ana Agente',
+    role: 'agente',
+    password: 'agente123',
+    active: true,
+  });
+}
+
+async function seedDemoContacts() {
+  const adminUser = (await DB.getAll('users')).find(u => u.username === 'admin');
+  const supervisorUser = (await DB.getAll('users')).find(u => u.username === 'supervisor1');
+  const agenteUser = (await DB.getAll('users')).find(u => u.username === 'agente1');
+
+  const demoContacts = [
+    { id:uid(), nombre:'Valentina', apellido:'Méndez', razon_social:'Tech Solutions SA', email:'vmendez@techsol.com', telefono:'1133445566', status:'cliente', ciudad:'Buenos Aires', tags:['VIP'], condicion:'Responsable Inscripto', cuit:'30-71234567-0', createdAt:now(), updatedAt:now(), updatedBy:'admin' },
+    { id:uid(), nombre:'Martín', apellido:'Gómez', razon_social:'Gomez & Asoc.', email:'mgomez@gmail.com', telefono:'1144556677', status:'prospecto', ciudad:'Rosario', tags:['potencial'], condicion:'Monotributista', cuit:'20-28765432-1', createdAt:now(), updatedAt:now(), updatedBy:'admin' },
+    { id:uid(), nombre:'Laura', apellido:'Sánchez', email:'lsanchez@mail.com', telefono:'1155667788', status:'prospecto', ciudad:'Córdoba', tags:[], createdAt:now(), updatedAt:now(), updatedBy:'admin' },
+  ];
+  for (const c of demoContacts) await DB.put('contacts', c);
+  await DB.put('tags', { id:uid(), name:'VIP' });
+  await DB.put('tags', { id:uid(), name:'potencial' });
+  await DB.put('tags', { id:uid(), name:'zona_norte' });
+
+  // Seed demo audit log entries over last 30 days for realistic analytics
+  const demoUsers = [
+    { id: adminUser?.id||'admin', name: adminUser?.name||'Administrador', role:'admin' },
+    { id: supervisorUser?.id||'sup1', name: supervisorUser?.name||'Carlos Supervisor', role:'supervisor' },
+    { id: agenteUser?.id||'ag1', name: agenteUser?.name||'Ana Agente', role:'agente' },
+  ];
+  const actions = [
+    { action:'create', entity:'contacts', weight: 8 },
+    { action:'update', entity:'contacts', weight: 12 },
+    { action:'delete', entity:'contacts', weight: 2 },
+    { action:'campaign_create', entity:'campaigns', weight: 3 },
+    { action:'campaign_exec', entity:'campaigns', weight: 5 },
+    { action:'import', entity:'contacts', weight: 1 },
+    { action:'login', entity:'users', weight: 6 },
+  ];
+  // Weighted random pick
+  const totalW = actions.reduce((s, a) => s + a.weight, 0);
+  const pickAction = () => {
+    let r = Math.random() * totalW;
+    for (const a of actions) { r -= a.weight; if (r <= 0) return a; }
+    return actions[0];
+  };
+  // Generate ~150 entries spread over 30 days
+  for (let i = 0; i < 150; i++) {
+    const daysAgo = Math.floor(Math.random() * 30);
+    const ts = new Date(Date.now() - daysAgo * 86400000 - Math.random() * 3600000 * 8).toISOString();
+    const user = demoUsers[Math.floor(Math.random() * demoUsers.length)];
+    const { action, entity } = pickAction();
+    await DB.put('audit_log', {
+      id: uid(), ts, action, entity, entityId: uid(),
+      detail: JSON.stringify({ nombre: ['Juan','María','Carlos','Ana','Luis'][Math.floor(Math.random()*5)] }),
+      userId: user.id, userName: user.name, userRole: user.role,
+    });
+  }
+}
+
+init();
+</script>
+</body>
+</html>
