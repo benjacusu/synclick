@@ -589,10 +589,7 @@ td .text-secondary { font-size: 11px; color: var(--text-2); }
       </div>
       <div id="login-debug" style="display:none;margin-top:10px;background:#0f172a;border-radius:6px;padding:10px 12px;font-size:11px;font-family:monospace;color:#94a3b8;max-height:200px;overflow-y:auto;white-space:pre-wrap;word-break:break-all"></div>
     </div>
-    <div class="login-footer">
-      Synclick v1.0
-      <span id="setup-link-wrap" style="display:none"> · <a href="#" onclick="Auth.showSetupModal();return false;" style="color:#64748b;text-decoration:underline;font-size:11px">Configuración inicial</a></span>
-    </div>
+    <div class="login-footer">Synclick v0.1-alpha</div>
   </div>
 </div>
 
@@ -905,107 +902,6 @@ const Auth = (() => {
 
   function can(perm) { return ROLE_PERMS[CONFIG.CURRENT_USER?.role || 'agente']?.[perm] ?? false; }
 
-  // Muestra el modal de setup inicial — solo cuando no hay usuarios en Sheets
-  function showSetupModal() {
-    const overlay = document.createElement('div');
-    overlay.id = 'setup-overlay';
-    overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:9999';
-    overlay.innerHTML = `
-      <div style="background:var(--surface);border-radius:var(--radius);padding:28px 32px;width:100%;max-width:400px;box-shadow:0 20px 60px rgba(0,0,0,.4)">
-        <div style="font-size:16px;font-weight:700;margin-bottom:4px">⚙️ Configuración inicial</div>
-        <div style="font-size:12.5px;color:var(--text-2);margin-bottom:20px">Creá el primer usuario administrador del sistema.</div>
-        <div class="form-group"><label class="form-label">Nombre completo</label><input class="form-control" id="setup-name" placeholder="Ej: Administrador"></div>
-        <div class="form-group"><label class="form-label">Nombre de usuario</label><input class="form-control" id="setup-username" placeholder="admin" autocomplete="off"></div>
-        <div class="form-group"><label class="form-label">Contraseña</label><input class="form-control" id="setup-pass" type="password" placeholder="Mínimo 6 caracteres"></div>
-        <div class="form-group"><label class="form-label">Confirmar contraseña</label><input class="form-control" id="setup-pass2" type="password" placeholder="Repetir contraseña"></div>
-        <div id="setup-error" style="display:none;color:var(--danger);font-size:12.5px;margin-bottom:12px"></div>
-        <div style="display:flex;gap:8px;justify-content:flex-end">
-          <button class="btn btn-secondary" onclick="document.getElementById('setup-overlay').remove()">Cancelar</button>
-          <button class="btn btn-primary" id="setup-submit" onclick="Auth._doSetup()">Crear administrador</button>
-        </div>
-      </div>`;
-    document.body.appendChild(overlay);
-  }
-
-  async function _doSetup() {
-    const name     = document.getElementById('setup-name').value.trim();
-    const username = document.getElementById('setup-username').value.trim().toLowerCase();
-    const pass     = document.getElementById('setup-pass').value;
-    const pass2    = document.getElementById('setup-pass2').value;
-    const errEl    = document.getElementById('setup-error');
-    const btn      = document.getElementById('setup-submit');
-    errEl.style.display = 'none';
-
-    if (!name || !username) { errEl.style.display='block'; errEl.textContent='Completá nombre y usuario.'; return; }
-    if (pass.length < 6)    { errEl.style.display='block'; errEl.textContent='La contraseña debe tener al menos 6 caracteres.'; return; }
-    if (pass !== pass2)     { errEl.style.display='block'; errEl.textContent='Las contraseñas no coinciden.'; return; }
-
-    btn.disabled = true; btn.textContent = 'Creando…';
-    try {
-      await createUser({ username, name, role: 'admin', password: pass, active: true });
-      await Sync.forceSync();
-      document.getElementById('setup-overlay').remove();
-      // Ocultar el link de setup
-      const wrap = document.getElementById('setup-link-wrap');
-      if (wrap) wrap.style.display = 'none';
-      // Mostrar mensaje de éxito en el login
-      const errLogin = document.getElementById('login-error');
-      errLogin.style.color = '#16a34a';
-      errLogin.style.display = 'block';
-      errLogin.textContent = '✅ Administrador creado. Ya podés iniciar sesión.';
-    } catch(e) {
-      btn.disabled = false; btn.textContent = 'Crear administrador';
-      errEl.style.display = 'block'; errEl.textContent = e.message;
-    }
-  }
-
-  // Verificar si hay usuarios en Sheets y mostrar/ocultar el link de setup
-  async function debugLogin() {
-    const box = document.getElementById('login-debug');
-    box.style.display = 'block';
-    box.textContent = '⏳ Probando conexión...\n';
-
-    const log = (msg) => { box.textContent += msg + '\n'; box.scrollTop = box.scrollHeight; };
-
-    log('GAS_URL: ' + (CONFIG.GAS_URL || '(vacía)'));
-
-    if (!CONFIG.GAS_URL || CONFIG.GAS_URL === 'TU_URL_AQUI') {
-      log('❌ GAS_URL no configurada'); return;
-    }
-
-    // Test 1: JSONP ping
-    log('\n— Test 1: JSONP ping —');
-    try {
-      const ping = await fetchJSONP(CONFIG.GAS_URL + '?action=ping');
-      log('✅ Ping OK: ' + JSON.stringify(ping));
-    } catch(e) {
-      log('❌ Ping falló: ' + e.message);
-    }
-
-    // Test 2: Traer usuarios
-    log('\n— Test 2: Usuarios desde Sheets —');
-    try {
-      const data = await fetchJSONP(CONFIG.GAS_URL + '?action=pull&entity=users');
-      const users = data?.users || [];
-      log('Respuesta cruda: ' + JSON.stringify(data).slice(0, 300));
-      log('Total usuarios: ' + users.length);
-      users.forEach(u => {
-        log(`  · ${u.username} | hash: ${u.hash ? u.hash.slice(0,8)+'...' : 'NULL'} | salt: ${u.salt ? u.salt.slice(0,8)+'...' : 'NULL'} | active: ${u.active}`);
-      });
-    } catch(e) {
-      log('❌ Pull usuarios falló: ' + e.message);
-    }
-  }
-
-  async function checkFirstRun() {
-    if (!CONFIG.GAS_URL) return;
-    try {
-      const users = await fetchUsers();
-      const wrap = document.getElementById('setup-link-wrap');
-      if (wrap) wrap.style.display = users.length === 0 ? 'inline' : 'none';
-    } catch(e) {}
-  }
-
   function togglePassword() {
     const input = document.getElementById('login-pass');
     const btn = document.getElementById('pass-toggle-btn');
@@ -1022,7 +918,7 @@ const Auth = (() => {
 
   return { login, logout, checkSession, can, applySession, createUser, fetchUsers, getUsers,
            hashPassword, genSalt, togglePassword, toggleProfileMenu, closeProfileMenu,
-           showSetupModal, _doSetup, checkFirstRun, debugLogin };
+           debugLogin };
 })();
 // ════════════════════════════════════════════
 // UTILS
@@ -1906,6 +1802,7 @@ const Views = {
         <button class="btn btn-ghost btn-sm" onclick="Views.showEditUserModal('${u.id}')" title="Editar">✎</button>
         <button class="btn btn-ghost btn-sm" onclick="Views.showChangePassword('${u.id}')" title="Cambiar contraseña">🔑</button>
         ${!isSelf ? `<button class="btn btn-${u.active?'danger':'secondary'} btn-sm" onclick="Views.toggleUserActive('${u.id}')" title="${u.active?'Desactivar':'Activar'}">${u.active?'🚫':'✓'}</button>` : ''}
+        ${!isSelf ? `<button class="btn btn-danger btn-sm" onclick="Views.confirmDeleteUser('${u.id}','${esc(u.name)}')" title="Eliminar usuario">🗑</button>` : ''}
       </div>
     </div>`;
   },
@@ -2031,7 +1928,36 @@ const Views = {
     Toast.success(user.active === 'true' ? 'Usuario activado' : 'Usuario desactivado'); Views.users();
   },
 
-  // ── DASHBOARD ──
+  confirmDeleteUser(id, name) {
+    Modal.open('Eliminar usuario', `
+      <div style="text-align:center;padding:8px 0 16px">
+        <div style="font-size:32px;margin-bottom:12px">🗑</div>
+        <div style="font-size:15px;font-weight:600;margin-bottom:8px">¿Eliminar a <em>${esc(name)}</em>?</div>
+        <div style="font-size:13px;color:var(--text-2)">Esta acción es permanente y no se puede deshacer.<br>El usuario será eliminado del sistema y del servidor.</div>
+      </div>
+    `, `
+      <button class="btn btn-secondary" onclick="Modal.close()">Cancelar</button>
+      <button class="btn btn-danger" onclick="Views.deleteUser('${id}')">Sí, eliminar</button>
+    `);
+  },
+
+  async deleteUser(id) {
+    const allUsers = await Auth.fetchUsers();
+    const user = allUsers.find(u => u.id === id);
+    if (!user) { Modal.close(); Toast.error('Usuario no encontrado'); return; }
+
+    // No se puede eliminar al último admin
+    if (user.role === 'admin') {
+      const admins = allUsers.filter(u => u.role === 'admin');
+      if (admins.length <= 1) { Toast.error('No podés eliminar al único administrador'); return; }
+    }
+
+    await Sync.enqueue('delete', 'users', id, {});
+    await Sync.forceSync();
+    Modal.close();
+    Toast.success(`Usuario "${user.name}" eliminado`);
+    Views.users();
+  },
   async dashboard() {
     document.getElementById('page-title').textContent = 'Dashboard';
     document.getElementById('topbar-actions').innerHTML = '';
@@ -3188,7 +3114,6 @@ const Views = {
             <div class="text-muted text-sm mb-4">Si es la primera vez que conectás, subí todos los datos locales al servidor para que queden respaldados en Google Sheets.</div>
             <div style="display:flex;gap:8px;flex-wrap:wrap">
               <button class="btn btn-secondary" id="push-all-btn" onclick="Views.pushAllToServer()">⬆ Subir todos los datos locales</button>
-              <button class="btn btn-ghost btn-sm" onclick="Views.createFirstAdmin()" style="font-size:11.5px">🔑 Crear admin inicial</button>
               <button class="btn btn-ghost btn-sm" onclick="Views.runSyncDiagnostic()" style="font-size:11.5px">🔬 Diagnóstico de sync</button>
             </div>
           </div>` : ''}
@@ -3337,114 +3262,6 @@ const Views = {
           </div>` : ''}
       </div>
     `, `<button class="btn btn-primary" onclick="Modal.close()">Entendido</button>`);
-  },
-
-  async createFirstAdmin() {
-    Modal.open('Crear administrador inicial', `
-      <div class="text-muted text-sm mb-4">Esto crea el primer usuario admin directamente en Google Sheets. Usalo solo la primera vez.</div>
-      <div class="form-row">
-        <div class="form-group"><label class="form-label">Nombre completo</label><input class="form-control" id="fa-name" placeholder="Ej: Benjamín Admin" value="Administrador"></div>
-        <div class="form-group"><label class="form-label">Usuario</label><input class="form-control" id="fa-username" placeholder="admin" value="admin"></div>
-      </div>
-      <div class="form-row">
-        <div class="form-group"><label class="form-label">Contraseña</label><input class="form-control" id="fa-pass" type="password" placeholder="Mínimo 6 caracteres"></div>
-        <div class="form-group"><label class="form-label">Confirmar</label><input class="form-control" id="fa-pass2" type="password" placeholder="Repetir contraseña"></div>
-      </div>
-    `, `
-      <button class="btn btn-secondary" onclick="Modal.close()">Cancelar</button>
-      <button class="btn btn-primary" onclick="Views._doCreateFirstAdmin()">Crear admin</button>
-    `);
-  },
-
-  async _doCreateFirstAdmin() {
-    const name = document.getElementById('fa-name').value.trim();
-    const username = document.getElementById('fa-username').value.trim().toLowerCase();
-    const pass = document.getElementById('fa-pass').value;
-    const pass2 = document.getElementById('fa-pass2').value;
-    if (!name || !username) return Toast.error('Completá nombre y usuario');
-    if (pass.length < 6) return Toast.error('La contraseña debe tener al menos 6 caracteres');
-    if (pass !== pass2) return Toast.error('Las contraseñas no coinciden');
-    try {
-      await Auth.createUser({ username, name, role: 'admin', password: pass, active: true });
-      await Sync.forceSync();
-      Modal.close();
-      Toast.success(`✅ Admin "${name}" creado en Sheets. Ya podés iniciar sesión.`);
-    } catch(e) { Toast.error(e.message); }
-  },
-
-  async pushAllToServer() {
-    const btn = document.getElementById('push-all-btn');
-    if (btn) { btn.disabled = true; btn.textContent = '⬆ Subiendo…'; }
-    try {
-      const total = await Sync.pushAllLocalData();
-      Toast.success(`✅ ${total} registros enviados al servidor`);
-    } catch(e) {
-      Toast.error('Error al subir datos: ' + e.message);
-    }
-    if (btn) { btn.disabled = false; btn.textContent = '⬆ Subir todos los datos locales'; }
-  },
-
-  async runSyncDiagnostic() {
-    Modal.open('🔬 Diagnóstico de sincronización', `
-      <div style="text-align:center;padding:20px 0">
-        <div style="font-size:24px;margin-bottom:8px">⏳</div>
-        <div style="color:var(--text-2)">Probando escritura y lectura con GAS…</div>
-      </div>
-    `, '');
-
-    const results = await Sync.debugSync();
-
-    let html = '<div style="font-size:13px">';
-    let allOk = true;
-
-    for (const [method, res] of Object.entries(results)) {
-      const color = res.ok ? '#16a34a' : '#ef4444';
-      html += `
-        <div style="margin-bottom:12px;padding:10px 12px;background:var(--bg);border-radius:var(--radius-sm);border-left:3px solid ${color}">
-          <div style="font-weight:700;margin-bottom:4px;color:${color}">${method}</div>
-          <div style="font-size:11.5px;color:var(--text-2)">${res.detail}</div>
-        </div>`;
-      if (!res.ok) allOk = false;
-    }
-
-    if (allOk) {
-      html += `<div style="padding:10px 12px;background:#dcfce7;border-radius:var(--radius-sm);color:#15803d;font-weight:600">
-        ✅ Todo funciona. Podés subir los datos.
-      </div>`;
-    } else {
-      html += `<div style="padding:10px 12px;background:#fef2f2;border-radius:var(--radius-sm);color:#dc2626;font-size:12.5px">
-        <strong>Verificá en Apps Script:</strong><br>
-        • Implementar → Administrar implementaciones → acceso = "Cualquiera"<br>
-        • Ejecutar como: Tu cuenta Google<br>
-        • Hiciste nueva implementación luego del último cambio en Code.gs
-      </div>`;
-    }
-
-    html += '</div>';
-    document.querySelector('#modal-body').innerHTML = html;
-    document.querySelector('#modal-footer').innerHTML = `<button class="btn btn-primary" onclick="Modal.close()">Cerrar</button>`;
-  },
-
-  showNewTagModal() {
-    Modal.open('Nueva etiqueta', `
-      <div class="form-group"><label class="form-label">Nombre de la etiqueta</label><input class="form-control" id="nt-name" placeholder="Ej: VIP, zona_norte, potencial"></div>
-    `, `
-      <button class="btn btn-secondary" onclick="Modal.close()">Cancelar</button>
-      <button class="btn btn-primary" onclick="Views.saveNewTag()">Crear</button>
-    `);
-  },
-
-  async saveNewTag() {
-    const name = document.getElementById('nt-name').value.trim();
-    if (!name) return Toast.error('Ingresá un nombre');
-    await Data.saveTag({ name });
-    Modal.close(); Toast.success('Etiqueta creada'); Views.settings();
-  },
-
-  async deleteTag(id) {
-    await DB.del('tags', id);
-    await Sync.enqueue('delete', 'tags', id, {});
-    Toast.success('Etiqueta eliminada'); Views.settings();
   },
 
   // ── IMPORT ──
@@ -3972,7 +3789,6 @@ async function init() {
     Router.render();
   } else {
     Sync.init();
-    Auth.checkFirstRun(); // mostrar link de setup si no hay usuarios
   }
 }
 
