@@ -758,9 +758,23 @@ const Auth = (() => {
         const remoteData = await fetchJSONP(CONFIG.GAS_URL + '?action=pull&entity=users');
         const remoteUsers = remoteData?.users || [];
         for (const u of remoteUsers) {
-          if (u && u.id) await DB.put('users', u);
+          if (!u || !u.id) continue;
+          // Solo sobreescribir usuario local si el remoto tiene hash y salt válidos
+          // Evita que un Sheets con datos incompletos rompa el login
+          const hasValidCredentials = u.hash && u.salt &&
+            u.hash !== '[PROTECTED]' && u.hash !== '[P]' &&
+            u.salt !== '[PROTECTED]' && u.salt !== '[P]';
+          if (hasValidCredentials) {
+            await DB.put('users', u);
+          } else {
+            // Actualizar solo campos no-sensibles (nombre, rol, activo)
+            const local = await DB.get('users', u.id).catch(() => null);
+            if (local) {
+              await DB.put('users', { ...local, name: u.name || local.name, role: u.role || local.role, active: u.active ?? local.active });
+            }
+          }
         }
-      } catch(e) { /* offline — usar usuarios locales */ }
+      } catch(e) { /* offline o error — usar usuarios locales */ }
     }
 
     const users = await DB.getAll('users');
@@ -3060,6 +3074,7 @@ const Views = {
             <div class="text-muted text-sm mb-4">Si es la primera vez que conectás, subí todos los datos locales al servidor para que queden respaldados en Google Sheets.</div>
             <div style="display:flex;gap:8px;flex-wrap:wrap">
               <button class="btn btn-secondary" id="push-all-btn" onclick="Views.pushAllToServer()">⬆ Subir todos los datos locales</button>
+              <button class="btn btn-ghost btn-sm" onclick="Views.resyncUsers()" style="font-size:11.5px">🔑 Re-sincronizar usuarios</button>
               <button class="btn btn-ghost btn-sm" onclick="Views.runSyncDiagnostic()" style="font-size:11.5px">🔬 Diagnóstico de sync</button>
             </div>
           </div>` : ''}
@@ -3208,6 +3223,25 @@ const Views = {
           </div>` : ''}
       </div>
     `, `<button class="btn btn-primary" onclick="Modal.close()">Entendido</button>`);
+  },
+
+  async resyncUsers() {
+    try {
+      const users = await DB.getAll('users');
+      if (!users.length) { Toast.error('No hay usuarios locales para sincronizar'); return; }
+      for (const user of users) {
+        // Verificar que el usuario local tiene hash y salt reales
+        if (!user.hash || user.hash === '[PROTECTED]' || user.hash === '[P]') {
+          Toast.error(`Usuario ${user.username} no tiene credenciales locales válidas`);
+          continue;
+        }
+        await Sync.enqueue('upsert', 'users', user.id, user);
+      }
+      await Sync.forceSync();
+      Toast.success(`✅ ${users.length} usuarios re-sincronizados con credenciales completas`);
+    } catch(e) {
+      Toast.error('Error: ' + e.message);
+    }
   },
 
   async pushAllToServer() {
