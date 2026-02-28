@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#0f172a">
-<title>SynclickCRM</title>
+<title>SynclickCRM — Gestión Comercial</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,400;12..96,600;12..96,800&family=DM+Sans:ital,opsz,wght@0,9..40,300;0,9..40,400;0,9..40,500;1,9..40,300&display=swap" rel="stylesheet">
 <style>
@@ -585,7 +585,7 @@ td .text-secondary { font-size: 11px; color: var(--text-2); }
         Ingresar →
       </button>
     </div>
-    <div class="login-footer">SynclickCRM v1.0 · Usuario por defecto: <strong style="color:#94a3b8">admin / admin123</strong></div>
+    <div class="login-footer">SynclickCRM v1.0</div>
   </div>
 </div>
 
@@ -755,13 +755,10 @@ const Auth = (() => {
     // Si hay GAS_URL configurado, intentar actualizar usuarios desde Sheets
     if (CONFIG.GAS_URL) {
       try {
-        const resp = await fetch(CONFIG.GAS_URL + '?action=pull&entity=users');
-        if (resp.ok) {
-          const data = await resp.json();
-          const remoteUsers = data.users || [];
-          for (const u of remoteUsers) {
-            if (u && u.id) await DB.put('users', u);
-          }
+        const remoteData = await fetchJSONP(CONFIG.GAS_URL + '?action=pull&entity=users');
+        const remoteUsers = remoteData?.users || [];
+        for (const u of remoteUsers) {
+          if (u && u.id) await DB.put('users', u);
         }
       } catch(e) { /* offline — usar usuarios locales */ }
     }
@@ -3906,3 +3903,4 @@ init();
 </script>
 </body>
 </html>
+
