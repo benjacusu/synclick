@@ -702,6 +702,9 @@ td .text-secondary { font-size: 11px; color: var(--text-2); }
 // JSONP — global, usada por Auth y Sync
 // ════════════════════════════════════════════
 function fetchJSONP(url) {
+  // Agregar token de seguridad automáticamente
+  const sep = url.includes('?') ? '&' : '?';
+  const tokenParam = CONFIG.API_TOKEN ? sep + 'token=' + encodeURIComponent(CONFIG.API_TOKEN) : '';
   return new Promise((resolve, reject) => {
     const cbName = '__synclick_cb_' + Date.now() + '_' + Math.random().toString(36).slice(2,6);
     const script = document.createElement('script');
@@ -715,7 +718,7 @@ function fetchJSONP(url) {
       if (script.parentNode) script.parentNode.removeChild(script);
     }
     window[cbName] = (data) => { cleanup(); resolve(data); };
-    script.src = url + (url.includes('?') ? '&' : '?') + 'callback=' + cbName;
+    script.src = url + tokenParam + '&callback=' + cbName;
     script.onerror = () => { cleanup(); reject(new Error('JSONP load error')); };
     document.head.appendChild(script);
   });
@@ -723,7 +726,8 @@ function fetchJSONP(url) {
 
 const CONFIG = {
   // ⬇ Pegá tu URL de Apps Script aquí para que todos los usuarios la tengan automáticamente
-  GAS_URL: localStorage.getItem('gas_url') || 'https://script.google.com/macros/s/AKfycbxHEcRtfuKIrTjwTqmFRehk0eAj-1kdSWV-xl4HD4E_0kKIQCw-GqqWb4CNtv40ICyv/exec',
+  GAS_URL: localStorage.getItem('gas_url') || 'https://script.google.com/macros/s/AKfycbxkYQqyn88a0yhWsmHFbRQ646Jcerf4kq7zpJCXMas302LC_NUce5KeGINGpPzRBK8/exec',
+  API_TOKEN: '76d8aba6e66fb4fe7fd6990ac04c69632d23ce5ee9c01a6988e31827c6146db0', // ← mismo valor que API_TOKEN en Code.gs
   SYNC_INTERVAL: 30000,
   APP_VERSION: '1.0.0',
   CURRENT_USER: null, // set by Auth after login
@@ -1082,14 +1086,13 @@ const Sync = (() => {
   // Envío a GAS con no-cors — la respuesta es "opaca" (status=0, ok=false)
   // pero los datos SÍ llegan al servidor. Tratamos status=0 como éxito.
   async function sendToGAS(item) {
+    const payload = Object.assign({}, item, { token: CONFIG.API_TOKEN });
     const resp = await fetch(CONFIG.GAS_URL, {
       method: 'POST',
       mode: 'no-cors',
       headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify(item),
+      body: JSON.stringify(payload),
     });
-    // Con no-cors: resp.status === 0, resp.type === 'opaque' → éxito
-    // Con cors normal: resp.status === 200 → éxito
     return { ok: resp.status === 0 || resp.ok, opaque: resp.type === 'opaque' };
   }
 
