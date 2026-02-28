@@ -581,7 +581,7 @@ td .text-secondary { font-size: 11px; color: var(--text-2); }
           <button class="login-pass-toggle" onclick="Auth.togglePassword()" id="pass-toggle-btn" tabindex="-1">👁</button>
         </div>
       </div>
-      <button class="btn btn-primary w-full" style="margin-top:6px;justify-content:center;padding:11px" onclick="Auth.login()">
+      <button id="login-btn" class="btn btn-primary w-full" style="margin-top:6px;justify-content:center;padding:11px" onclick="Auth.login()">
         Ingresar →
       </button>
     </div>
@@ -704,24 +704,32 @@ const CONFIG = {
 };
 
 // ════════════════════════════════════════════
-// AUTH MODULE
+// AUTH MODULE — Sheets como fuente de verdad
 // ════════════════════════════════════════════
 const Auth = (() => {
 
-  // Role permissions map
   const ROLE_PERMS = {
     admin:      { users:true, settings:true, deleteContacts:true, campaigns:true, exports:true, conflicts:true, analytics:true, import:true },
     supervisor: { users:false, settings:false, deleteContacts:true, campaigns:true, exports:true, conflicts:true, analytics:true, import:true },
     agente:     { users:false, settings:false, deleteContacts:false, campaigns:false, exports:false, conflicts:false, analytics:false, import:false },
   };
 
-  // Hash password with SHA-256 + salt (using WebCrypto API)
+  let _cache = [];
+
+  function _saveCache(users) {
+    _cache = users;
+    // Guardamos sin hash/salt en localStorage (solo datos públicos para display)
+    try {
+      const safe = users.map(({ hash, salt, ...u }) => u);
+      localStorage.setItem('synclick_users_cache', JSON.stringify(safe));
+    } catch(e) {}
+  }
+
   async function hashPassword(password, salt) {
     const encoder = new TextEncoder();
     const data = encoder.encode(salt + password + 'synclickcrm_2024');
     const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-    const hashArray = Array.from(new Uint8Array(hashBuffer));
-    return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
+    return Array.from(new Uint8Array(hashBuffer)).map(b => b.toString(16).padStart(2,'0')).join('');
   }
 
   function genSalt() {
@@ -730,69 +738,71 @@ const Auth = (() => {
     return Array.from(arr).map(b => b.toString(16).padStart(2,'0')).join('');
   }
 
+  // Trae usuarios desde Sheets (con credenciales completas para auth)
+  async function fetchUsers() {
+    if (!CONFIG.GAS_URL) return _cache;
+    try {
+      const data = await fetchJSONP(CONFIG.GAS_URL + '?action=pull&entity=users');
+      const users = (data?.users || []).filter(u => u && u.id && u.username);
+      if (users.length) _saveCache(users);
+      return users.length ? users : _cache;
+    } catch(e) {
+      console.warn('fetchUsers fallback a cache:', e.message);
+      return _cache;
+    }
+  }
+
+  // Usuarios disponibles para display (sin credenciales)
+  async function getUsers() {
+    const users = await fetchUsers();
+    return users.map(({ hash, salt, ...u }) => u);
+  }
+
+  // Crea usuario y escribe directo a Sheets
   async function createUser({ username, name, role, password, active = true }) {
-    const existing = await DB.getAll('users');
-    if (existing.find(u => u.username === username)) throw new Error('El nombre de usuario ya existe');
+    const users = await fetchUsers();
+    if (users.find(u => u.username?.toLowerCase() === username.toLowerCase()))
+      throw new Error('El nombre de usuario ya existe');
     const salt = genSalt();
     const hash = await hashPassword(password, salt);
-    const user = { id: uid(), username, name, role, salt, hash, active, createdAt: now() };
-    await DB.put('users', user);
-    // Sync hash y salt a Sheets — son necesarios para autenticación remota
+    const user = { id: uid(), username, name, role, salt, hash,
+                   active: active ? 'true' : 'false', createdAt: now(), updatedAt: now() };
     await Sync.enqueue('upsert', 'users', user.id, user);
+    _cache = [...users.filter(u => u.id !== user.id), user];
+    _saveCache(_cache);
     return user;
   }
 
   async function login() {
-    const username = document.getElementById('login-user').value.trim();
+    const username = document.getElementById('login-user').value.trim().toLowerCase();
     const password = document.getElementById('login-pass').value;
     const errEl = document.getElementById('login-error');
+    const btnEl = document.getElementById('login-btn');
     errEl.style.display = 'none';
 
     if (!username || !password) {
       errEl.style.display = 'block'; errEl.textContent = 'Completá usuario y contraseña.'; return;
     }
 
-    // Si hay GAS_URL configurado, intentar actualizar usuarios desde Sheets
-    if (CONFIG.GAS_URL) {
-      try {
-        const remoteData = await fetchJSONP(CONFIG.GAS_URL + '?action=pull&entity=users');
-        const remoteUsers = remoteData?.users || [];
-        for (const u of remoteUsers) {
-          if (!u || !u.id) continue;
-          // Solo sobreescribir usuario local si el remoto tiene hash y salt válidos
-          // Evita que un Sheets con datos incompletos rompa el login
-          const hasValidCredentials = u.hash && u.salt &&
-            u.hash !== '[PROTECTED]' && u.hash !== '[P]' &&
-            u.salt !== '[PROTECTED]' && u.salt !== '[P]';
-          if (hasValidCredentials) {
-            await DB.put('users', u);
-          } else {
-            // Actualizar solo campos no-sensibles (nombre, rol, activo)
-            const local = await DB.get('users', u.id).catch(() => null);
-            if (local) {
-              await DB.put('users', { ...local, name: u.name || local.name, role: u.role || local.role, active: u.active ?? local.active });
-            }
-          }
-        }
-      } catch(e) { /* offline o error — usar usuarios locales */ }
-    }
+    if (btnEl) { btnEl.disabled = true; btnEl.textContent = 'Verificando…'; }
 
-    const users = await DB.getAll('users');
-    const user = users.find(u => u.username === username);
+    const users = await fetchUsers();
 
-    if (!user) {
-      errEl.style.display = 'block'; errEl.textContent = 'Usuario no encontrado.'; return;
-    }
-    if (!user.active) {
-      errEl.style.display = 'block'; errEl.textContent = 'Tu cuenta está inactiva. Contactá al administrador.'; return;
+    if (btnEl) { btnEl.disabled = false; btnEl.textContent = 'Ingresar'; }
+
+    const user = users.find(u => u.username?.toLowerCase() === username);
+    if (!user) { errEl.style.display='block'; errEl.textContent='Usuario no encontrado.'; return; }
+
+    const isActive = user.active===true || user.active==='true' || user.active===1;
+    if (!isActive) { errEl.style.display='block'; errEl.textContent='Tu cuenta está inactiva. Contactá al administrador.'; return; }
+
+    if (!user.hash || !user.salt) {
+      errEl.style.display='block'; errEl.textContent='Credenciales no configuradas. Contactá al administrador.'; return;
     }
 
     const hash = await hashPassword(password, user.salt);
-    if (hash !== user.hash) {
-      errEl.style.display = 'block'; errEl.textContent = 'Contraseña incorrecta.'; return;
-    }
+    if (hash !== user.hash) { errEl.style.display='block'; errEl.textContent='Contraseña incorrecta.'; return; }
 
-    // Create session
     const session = {
       userId: user.id, username: user.username, name: user.name,
       role: user.role, loginAt: now(),
@@ -802,14 +812,11 @@ const Auth = (() => {
     CONFIG.CURRENT_USER = session;
     applySession(session);
 
-    // Audit login
     setTimeout(() => Audit.log('login', 'users', user.id, { username: user.username }).catch(() => {}), 100);
 
-    // Hide login
     const ls = document.getElementById('login-screen');
     ls.classList.add('hide');
     setTimeout(() => ls.style.display = 'none', 400);
-
     Toast.success(`¡Bienvenido/a, ${user.name}!`);
     Router.render();
   }
@@ -831,15 +838,10 @@ const Auth = (() => {
     document.getElementById('nav-avatar').textContent = initials(session.name);
     document.getElementById('nav-username').textContent = session.name;
     document.getElementById('nav-role').textContent = roleLabels[session.role] || session.role;
-    // Show/hide role-restricted nav items
     const isAdmin = session.role === 'admin';
-    const isSupervisorOrAdmin = session.role === 'admin' || session.role === 'supervisor';
-    document.querySelectorAll('.admin-only').forEach(el => {
-      el.style.display = isAdmin ? '' : 'none';
-    });
-    document.querySelectorAll('.supervisor-only').forEach(el => {
-      el.style.display = isSupervisorOrAdmin ? '' : 'none';
-    });
+    const isSA = ['admin','supervisor'].includes(session.role);
+    document.querySelectorAll('.admin-only').forEach(el => el.style.display = isAdmin ? '' : 'none');
+    document.querySelectorAll('.supervisor-only').forEach(el => el.style.display = isSA ? '' : 'none');
   }
 
   function checkSession() {
@@ -854,10 +856,7 @@ const Auth = (() => {
     } catch { return false; }
   }
 
-  function can(perm) {
-    const role = CONFIG.CURRENT_USER?.role || 'agente';
-    return ROLE_PERMS[role]?.[perm] ?? false;
-  }
+  function can(perm) { return ROLE_PERMS[CONFIG.CURRENT_USER?.role || 'agente']?.[perm] ?? false; }
 
   function togglePassword() {
     const input = document.getElementById('login-pass');
@@ -866,22 +865,16 @@ const Auth = (() => {
     input.type = show ? 'text' : 'password';
     btn.textContent = show ? '🙈' : '👁';
   }
+  function toggleProfileMenu() { document.getElementById('profile-menu').classList.toggle('open'); }
+  function closeProfileMenu() { document.getElementById('profile-menu').classList.remove('open'); }
 
-  function toggleProfileMenu() {
-    document.getElementById('profile-menu').classList.toggle('open');
-  }
-  function closeProfileMenu() {
-    document.getElementById('profile-menu').classList.remove('open');
-  }
-
-  // Close menu on outside click
   document.addEventListener('click', e => {
     if (!document.getElementById('user-chip-btn')?.contains(e.target)) closeProfileMenu();
   });
 
-  return { login, logout, createUser, hashPassword, genSalt, checkSession, can, togglePassword, toggleProfileMenu, closeProfileMenu };
+  return { login, logout, checkSession, can, applySession, createUser, fetchUsers, getUsers,
+           hashPassword, genSalt, togglePassword, toggleProfileMenu, closeProfileMenu };
 })();
-
 // ════════════════════════════════════════════
 // UTILS
 // ════════════════════════════════════════════
@@ -1113,16 +1106,13 @@ const Sync = (() => {
       if (!data || data.error) { console.warn('Pull error:', data?.error); return; }
       let imported = 0;
       for (const [store, rows] of Object.entries(data)) {
-        if (Array.isArray(rows) && rows.length) {
-          await DB.putMany(store, rows).catch(() => {});
-          imported += rows.length;
-        }
+        if (!Array.isArray(rows) || !rows.length) continue;
+        if (store === 'users') continue; // Auth maneja usuarios directamente desde Sheets
+        await DB.putMany(store, rows).catch(() => {});
+        imported += rows.length;
       }
       localStorage.setItem('synclick_last_pull', new Date().toISOString());
-      if (imported > 0) {
-        Router.render();
-        Toast.success(`${imported} registros sincronizados`);
-      }
+      if (imported > 0) Router.render();
     } catch(e) { console.warn('Pull failed:', e.message); }
   }
 
@@ -1174,25 +1164,19 @@ const Sync = (() => {
       if (!resp.ok) return;
       const data = await resp.json();
       if (data.error) { console.warn('Pull error:', data.error); return; }
-      let imported = 0;
       for (const [store, rows] of Object.entries(data)) {
-        if (Array.isArray(rows) && rows.length) {
-          await DB.putMany(store, rows).catch(() => {});
-          imported += rows.length;
-        }
+        if (!Array.isArray(rows) || !rows.length) continue;
+        if (store === 'users') continue; // Auth maneja usuarios directamente desde Sheets
+        await DB.putMany(store, rows).catch(() => {});
       }
       localStorage.setItem('last_pull', now());
-      if (imported > 0) {
-        Router.render();
-        Toast.success(`${imported} registros sincronizados`);
-      }
     } catch(e) { console.warn('Pull failed:', e.message); }
   }
 
   // Empuja TODOS los datos locales al servidor (útil en primera conexión)
   async function pushAllLocalData() {
     if (!online || !CONFIG.GAS_URL) return 0;
-    const entities = ['contacts','gestiones','tasks','campaigns','tags','notas','users'];
+    const entities = ['contacts','gestiones','tasks','campaigns','tags','notas']; // usuarios: Auth los gestiona directo en Sheets
     let total = 0;
     for (const entity of entities) {
       try {
@@ -1466,12 +1450,7 @@ const Data = {
     return tag;
   },
 
-  async getUsers() { return DB.getAll('users'); },
-  async saveUser(u) {
-    u.id = u.id || uid();
-    await DB.put('users', u);
-    return u;
-  },
+  async getUsers() { return Auth.getUsers(); },
 
   async getConflicts() { return DB.getAll('conflicts'); },
   async resolveConflict(id, choice) {
@@ -1682,8 +1661,9 @@ const Views = {
   async saveProfile() {
     const name = document.getElementById('prof-name').value.trim();
     if (!name) return Toast.error('El nombre no puede estar vacío');
-    const u = await DB.get('users', CONFIG.CURRENT_USER.userId);
-    if (u) { u.name = name; await DB.put('users', u); await Sync.enqueue('upsert','users',u.id,{...u,hash:'[P]',salt:'[P]'}); }
+    const allUsers = await Auth.fetchUsers();
+    const u = allUsers.find(u => u.id === CONFIG.CURRENT_USER.userId);
+    if (u) { u.name = name; u.updatedAt = now(); await Sync.enqueue('upsert','users',u.id,u); }
     CONFIG.CURRENT_USER.name = name;
     const session = JSON.parse(localStorage.getItem('synclick_session'));
     session.name = name;
@@ -1718,7 +1698,8 @@ const Views = {
     if (newPass !== confirm) return Toast.error('Las contraseñas no coinciden');
 
     const userId = targetUserId || CONFIG.CURRENT_USER.userId;
-    const user = await DB.get('users', userId);
+    const allUsers = await Auth.fetchUsers();
+    const user = allUsers.find(u => u.id === userId);
     if (!user) return Toast.error('Usuario no encontrado');
 
     if (isSelf) {
@@ -1730,7 +1711,7 @@ const Views = {
     const salt = Auth.genSalt();
     const hash = await Auth.hashPassword(newPass, salt);
     user.salt = salt; user.hash = hash; user.updatedAt = now();
-    await DB.put('users', user);
+    await Sync.enqueue('upsert','users',user.id,user);
     Modal.close(); Toast.success('Contraseña actualizada');
   },
 
@@ -1740,7 +1721,7 @@ const Views = {
     document.getElementById('page-title').textContent = 'Gestión de Usuarios';
     document.getElementById('topbar-actions').innerHTML = `<button class="btn btn-primary" onclick="Views.showNewUserModal()">+ Nuevo usuario</button>`;
 
-    const users = await DB.getAll('users');
+    const users = await Auth.getUsers();
     const roleLabel = { admin:'Administrador', supervisor:'Supervisor', agente:'Agente' };
     const roleColor = { admin:'badge-admin', supervisor:'badge-supervisor', agente:'badge-agente' };
 
@@ -1867,7 +1848,8 @@ const Views = {
   },
 
   async showEditUserModal(id) {
-    const user = await DB.get('users', id);
+    const allUsers = await Auth.fetchUsers();
+    const user = allUsers.find(u => u.id === id);
     if (!user) return;
     Modal.open('Editar usuario', `
       <div class="form-row">
@@ -1894,7 +1876,8 @@ const Views = {
   },
 
   async saveEditUser(id) {
-    const user = await DB.get('users', id);
+    const allUsers = await Auth.fetchUsers();
+    const user = allUsers.find(u => u.id === id);
     if (!user) return;
     const name = document.getElementById('eu-name').value.trim();
     if (!name) return Toast.error('El nombre es requerido');
@@ -1903,26 +1886,26 @@ const Views = {
     user.name = name;
     if (id !== CONFIG.CURRENT_USER?.userId) {
       user.role = roleEl.value;
-      user.active = activeEl.checked;
+      user.active = activeEl.checked ? 'true' : 'false';
     }
     user.updatedAt = now();
-    await DB.put('users', user);
-    await Sync.enqueue('upsert','users',user.id,{...user,hash:'[P]',salt:'[P]'});
+    await Sync.enqueue('upsert','users',user.id,user);
     Modal.close(); Toast.success('Usuario actualizado'); Views.users();
   },
 
   async toggleUserActive(id) {
-    const user = await DB.get('users', id);
+    const allUsers = await Auth.fetchUsers();
+    const user = allUsers.find(u => u.id === id);
     if (!user) return;
-    // Check if last admin
-    if (user.role === 'admin' && user.active) {
-      const admins = (await DB.getAll('users')).filter(u=>u.role==='admin' && u.active);
+    const isActive = user.active === true || user.active === 'true';
+    if (user.role === 'admin' && isActive) {
+      const admins = allUsers.filter(u => u.role === 'admin' && (u.active === true || u.active === 'true'));
       if (admins.length <= 1) { Toast.error('No podés desactivar al último administrador'); return; }
     }
-    user.active = !user.active; user.updatedAt = now();
-    await DB.put('users', user);
-    await Sync.enqueue('upsert','users',user.id,{...user,hash:'[P]',salt:'[P]'});
-    Toast.success(user.active ? 'Usuario activado' : 'Usuario desactivado'); Views.users();
+    user.active = isActive ? 'false' : 'true';
+    user.updatedAt = now();
+    await Sync.enqueue('upsert','users',user.id,user);
+    Toast.success(user.active === 'true' ? 'Usuario activado' : 'Usuario desactivado'); Views.users();
   },
 
   // ── DASHBOARD ──
@@ -3074,7 +3057,7 @@ const Views = {
             <div class="text-muted text-sm mb-4">Si es la primera vez que conectás, subí todos los datos locales al servidor para que queden respaldados en Google Sheets.</div>
             <div style="display:flex;gap:8px;flex-wrap:wrap">
               <button class="btn btn-secondary" id="push-all-btn" onclick="Views.pushAllToServer()">⬆ Subir todos los datos locales</button>
-              <button class="btn btn-ghost btn-sm" onclick="Views.resyncUsers()" style="font-size:11.5px">🔑 Re-sincronizar usuarios</button>
+              <button class="btn btn-ghost btn-sm" onclick="Views.createFirstAdmin()" style="font-size:11.5px">🔑 Crear admin inicial</button>
               <button class="btn btn-ghost btn-sm" onclick="Views.runSyncDiagnostic()" style="font-size:11.5px">🔬 Diagnóstico de sync</button>
             </div>
           </div>` : ''}
@@ -3225,23 +3208,37 @@ const Views = {
     `, `<button class="btn btn-primary" onclick="Modal.close()">Entendido</button>`);
   },
 
-  async resyncUsers() {
+  async createFirstAdmin() {
+    Modal.open('Crear administrador inicial', `
+      <div class="text-muted text-sm mb-4">Esto crea el primer usuario admin directamente en Google Sheets. Usalo solo la primera vez.</div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Nombre completo</label><input class="form-control" id="fa-name" placeholder="Ej: Benjamín Admin" value="Administrador"></div>
+        <div class="form-group"><label class="form-label">Usuario</label><input class="form-control" id="fa-username" placeholder="admin" value="admin"></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Contraseña</label><input class="form-control" id="fa-pass" type="password" placeholder="Mínimo 6 caracteres"></div>
+        <div class="form-group"><label class="form-label">Confirmar</label><input class="form-control" id="fa-pass2" type="password" placeholder="Repetir contraseña"></div>
+      </div>
+    `, `
+      <button class="btn btn-secondary" onclick="Modal.close()">Cancelar</button>
+      <button class="btn btn-primary" onclick="Views._doCreateFirstAdmin()">Crear admin</button>
+    `);
+  },
+
+  async _doCreateFirstAdmin() {
+    const name = document.getElementById('fa-name').value.trim();
+    const username = document.getElementById('fa-username').value.trim().toLowerCase();
+    const pass = document.getElementById('fa-pass').value;
+    const pass2 = document.getElementById('fa-pass2').value;
+    if (!name || !username) return Toast.error('Completá nombre y usuario');
+    if (pass.length < 6) return Toast.error('La contraseña debe tener al menos 6 caracteres');
+    if (pass !== pass2) return Toast.error('Las contraseñas no coinciden');
     try {
-      const users = await DB.getAll('users');
-      if (!users.length) { Toast.error('No hay usuarios locales para sincronizar'); return; }
-      for (const user of users) {
-        // Verificar que el usuario local tiene hash y salt reales
-        if (!user.hash || user.hash === '[PROTECTED]' || user.hash === '[P]') {
-          Toast.error(`Usuario ${user.username} no tiene credenciales locales válidas`);
-          continue;
-        }
-        await Sync.enqueue('upsert', 'users', user.id, user);
-      }
+      await Auth.createUser({ username, name, role: 'admin', password: pass, active: true });
       await Sync.forceSync();
-      Toast.success(`✅ ${users.length} usuarios re-sincronizados con credenciales completas`);
-    } catch(e) {
-      Toast.error('Error: ' + e.message);
-    }
+      Modal.close();
+      Toast.success(`✅ Admin "${name}" creado en Sheets. Ya podés iniciar sesión.`);
+    } catch(e) { Toast.error(e.message); }
   },
 
   async pushAllToServer() {
@@ -3834,24 +3831,18 @@ document.querySelectorAll('.nav-item[data-view]').forEach(el => {
 async function init() {
   await DB.open();
 
-  // Seed demo contacts and default admin user on first run
-  const users = await DB.getAll('users');
-  if (!users.length) await seedDefaultData();
-
+  // Seed demo contacts on first run (solo si no hay nada local)
   const contacts = await DB.getAll('contacts');
   if (!contacts.length) await seedDemoContacts();
 
-  // Check for existing valid session
   const hasSession = Auth.checkSession();
 
   if (hasSession) {
-    // Hide login screen immediately
     const ls = document.getElementById('login-screen');
     ls.style.display = 'none';
     await Sync.init();
     Router.render();
   } else {
-    // Show login, still init sync silently
     Sync.init();
   }
 }
