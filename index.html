@@ -902,6 +902,28 @@ const Auth = (() => {
 
   function can(perm) { return ROLE_PERMS[CONFIG.CURRENT_USER?.role || 'agente']?.[perm] ?? false; }
 
+  async function debugLogin() {
+    const box = document.getElementById('login-debug');
+    if (!box) return;
+    box.style.display = 'block';
+    box.textContent = '⏳ Probando conexión...\n';
+    const log = (msg) => { box.textContent += msg + '\n'; box.scrollTop = box.scrollHeight; };
+    log('GAS_URL: ' + (CONFIG.GAS_URL || '(vacía)'));
+    if (!CONFIG.GAS_URL || CONFIG.GAS_URL === 'TU_URL_AQUI') { log('❌ GAS_URL no configurada'); return; }
+    log('\n— Test 1: JSONP ping —');
+    try {
+      const ping = await fetchJSONP(CONFIG.GAS_URL + '?action=ping');
+      log('✅ Ping OK: ' + JSON.stringify(ping));
+    } catch(e) { log('❌ Ping falló: ' + e.message); }
+    log('\n— Test 2: Usuarios desde Sheets —');
+    try {
+      const data = await fetchJSONP(CONFIG.GAS_URL + '?action=pull&entity=users');
+      const users = data?.users || [];
+      log('Total usuarios: ' + users.length);
+      users.forEach(u => log('  · ' + u.username + ' | hash: ' + (u.hash ? u.hash.slice(0,8)+'…' : 'NULL') + ' | salt: ' + (u.salt ? u.salt.slice(0,8)+'…' : 'NULL') + ' | active: ' + u.active));
+    } catch(e) { log('❌ Pull usuarios falló: ' + e.message); }
+  }
+
   function togglePassword() {
     const input = document.getElementById('login-pass');
     const btn = document.getElementById('pass-toggle-btn');
