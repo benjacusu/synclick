@@ -932,7 +932,7 @@ const now = () => new Date().toISOString();
 const fmtDate = d => d ? new Date(d).toLocaleDateString('es-AR', {day:'2-digit',month:'2-digit',year:'numeric'}) : '—';
 const fmtDatetime = d => d ? new Date(d).toLocaleString('es-AR', {day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'}) : '—';
 const initials = (n='') => n.split(' ').slice(0,2).map(w=>w[0]||'').join('').toUpperCase() || '?';
-const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+const esc = s => String(s||'').replace(/&/g,'\u0026amp;').replace(/</g,'\u0026lt;').replace(/>/g,'\u0026gt;');
 
 const STATUS_LABELS = { prospecto:'Prospecto', cliente:'Cliente', inactivo:'Inactivo', otro:'Otro' };
 const GESTION_TYPES = ['Llamada','Notificación','Campaña','Reunión','Visita','Tarea','Nota','Cambio de estado'];
