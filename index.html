@@ -584,10 +584,6 @@ td .text-secondary { font-size: 11px; color: var(--text-2); }
       <button id="login-btn" class="btn btn-primary w-full" style="margin-top:6px;justify-content:center;padding:11px" onclick="Auth.login()">
         Ingresar →
       </button>
-      <div style="margin-top:12px;text-align:center">
-        <a href="#" onclick="Auth.debugLogin();return false;" style="font-size:11px;color:#64748b;text-decoration:underline">🔍 Probar conexión</a>
-      </div>
-      <div id="login-debug" style="display:none;margin-top:10px;background:#0f172a;border-radius:6px;padding:10px 12px;font-size:11px;font-family:monospace;color:#94a3b8;max-height:200px;overflow-y:auto;white-space:pre-wrap;word-break:break-all"></div>
     </div>
     <div class="login-footer">Synclick v0.1-alpha</div>
   </div>
@@ -917,30 +913,9 @@ const Auth = (() => {
     if (!document.getElementById('user-chip-btn')?.contains(e.target)) closeProfileMenu();
   });
 
-  async function debugLogin() {
-    const box = document.getElementById('login-debug');
-    if (!box) return;
-    box.style.display = 'block';
-    box.textContent = 'Probando conexion...\n';
-    const log = msg => { box.textContent += msg + '\n'; box.scrollTop = box.scrollHeight; };
-    log('GAS_URL: ' + (CONFIG.GAS_URL || '(vacia)'));
-    log('\n-- Test 1: ping --');
-    try {
-      const ping = await fetchJSONP(CONFIG.GAS_URL + '?action=ping');
-      log('OK: ' + JSON.stringify(ping));
-    } catch(e) { log('FAIL: ' + e.message); }
-    log('\n-- Test 2: usuarios --');
-    try {
-      const data = await fetchJSONP(CONFIG.GAS_URL + '?action=pull&entity=users');
-      const users = (data && data.users) ? data.users : [];
-      log('Total: ' + users.length);
-      users.forEach(u => log('  ' + u.username + ' hash:' + (u.hash ? u.hash.slice(0,8)+'...' : 'NULL') + ' salt:' + (u.salt ? 'OK' : 'NULL') + ' active:' + u.active));
-    } catch(e) { log('FAIL: ' + e.message); }
-  }
 
   return { login, logout, checkSession, can, applySession, createUser, fetchUsers, getUsers,
-           hashPassword, genSalt, togglePassword, toggleProfileMenu, closeProfileMenu,
-           debugLogin };
+           hashPassword, genSalt, togglePassword, toggleProfileMenu, closeProfileMenu };
 })();
 // ════════════════════════════════════════════
 // UTILS
