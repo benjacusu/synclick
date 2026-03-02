@@ -715,8 +715,7 @@ function fetchJSONP(url) {
       if (script.parentNode) script.parentNode.removeChild(script);
     }
     window[cbName] = (data) => { cleanup(); resolve(data); };
-    const tok = (CONFIG.API_TOKEN && CONFIG.API_TOKEN !== 'TU_TOKEN_AQUI') ? ('&token=' + encodeURIComponent(CONFIG.API_TOKEN)) : '';
-    script.src = url + (url.includes('?') ? '' : '?') + tok + '&callback=' + cbName;
+    script.src = url + (url.includes('?') ? '&' : '?') + 'callback=' + cbName;
     script.onerror = () => { cleanup(); reject(new Error('JSONP load error')); };
     document.head.appendChild(script);
   });
@@ -725,7 +724,7 @@ function fetchJSONP(url) {
 const CONFIG = {
   // ⬇ Pegá tu URL de Apps Script aquí para que todos los usuarios la tengan automáticamente
   GAS_URL: localStorage.getItem('gas_url') || 'https://script.google.com/macros/s/AKfycbxHEcRtfuKIrTjwTqmFRehk0eAj-1kdSWV-xl4HD4E_0kKIQCw-GqqWb4CNtv40ICyv/exec',
-  API_TOKEN: localStorage.getItem('api_token') || 'TU_TOKEN_AQUI',
+  API_TOKEN: localStorage.getItem('api_token') || '',
   SYNC_INTERVAL: 30000,
   APP_VERSION: '1.0.0',
   CURRENT_USER: null, // set by Auth after login
@@ -918,6 +917,27 @@ const Auth = (() => {
     if (!document.getElementById('user-chip-btn')?.contains(e.target)) closeProfileMenu();
   });
 
+  async function debugLogin() {
+    const box = document.getElementById('login-debug');
+    if (!box) return;
+    box.style.display = 'block';
+    box.textContent = 'Probando conexion...\n';
+    const log = msg => { box.textContent += msg + '\n'; box.scrollTop = box.scrollHeight; };
+    log('GAS_URL: ' + (CONFIG.GAS_URL || '(vacia)'));
+    log('\n-- Test 1: ping --');
+    try {
+      const ping = await fetchJSONP(CONFIG.GAS_URL + '?action=ping');
+      log('OK: ' + JSON.stringify(ping));
+    } catch(e) { log('FAIL: ' + e.message); }
+    log('\n-- Test 2: usuarios --');
+    try {
+      const data = await fetchJSONP(CONFIG.GAS_URL + '?action=pull&entity=users');
+      const users = (data && data.users) ? data.users : [];
+      log('Total: ' + users.length);
+      users.forEach(u => log('  ' + u.username + ' hash:' + (u.hash ? u.hash.slice(0,8)+'...' : 'NULL') + ' salt:' + (u.salt ? 'OK' : 'NULL') + ' active:' + u.active));
+    } catch(e) { log('FAIL: ' + e.message); }
+  }
+
   return { login, logout, checkSession, can, applySession, createUser, fetchUsers, getUsers,
            hashPassword, genSalt, togglePassword, toggleProfileMenu, closeProfileMenu,
            debugLogin };
@@ -930,7 +950,7 @@ const now = () => new Date().toISOString();
 const fmtDate = d => d ? new Date(d).toLocaleDateString('es-AR', {day:'2-digit',month:'2-digit',year:'numeric'}) : '—';
 const fmtDatetime = d => d ? new Date(d).toLocaleString('es-AR', {day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'}) : '—';
 const initials = (n='') => n.split(' ').slice(0,2).map(w=>w[0]||'').join('').toUpperCase() || '?';
-const esc = s => { const t={'&':'&'+'amp;','<':'&'+'lt;','>':'&'+'gt;'}; return String(s||'').replace(/[&<>]/g, c => t[c]); };
+const esc = s => String(s||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
 
 const STATUS_LABELS = { prospecto:'Prospecto', cliente:'Cliente', inactivo:'Inactivo', otro:'Otro' };
 const GESTION_TYPES = ['Llamada','Notificación','Campaña','Reunión','Visita','Tarea','Nota','Cambio de estado'];
@@ -1088,8 +1108,10 @@ const Sync = (() => {
       method: 'POST',
       mode: 'no-cors',
       headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify(Object.assign({}, item, { token: CONFIG.API_TOKEN })),
+      body: JSON.stringify(Object.assign({}, item, CONFIG.API_TOKEN ? {token: CONFIG.API_TOKEN} : {})),
     });
+    // Con no-cors: resp.status === 0, resp.type === 'opaque' → éxito
+    // Con cors normal: resp.status === 200 → éxito
     return { ok: resp.status === 0 || resp.ok, opaque: resp.type === 'opaque' };
   }
 
@@ -1802,7 +1824,7 @@ const Views = {
         <button class="btn btn-ghost btn-sm" onclick="Views.showEditUserModal('${u.id}')" title="Editar">✎</button>
         <button class="btn btn-ghost btn-sm" onclick="Views.showChangePassword('${u.id}')" title="Cambiar contraseña">🔑</button>
         ${!isSelf ? `<button class="btn btn-${u.active?'danger':'secondary'} btn-sm" onclick="Views.toggleUserActive('${u.id}')" title="${u.active?'Desactivar':'Activar'}">${u.active?'🚫':'✓'}</button>` : ''}
-        ${!isSelf ? `<button class="btn btn-danger btn-sm" onclick="Views.confirmDeleteUser('${u.id}','${esc(u.name)}')" title="Eliminar">🗑</button>` : ''}
+        ${!isSelf ? `<button class="btn btn-danger btn-sm" onclick="Views.confirmDeleteUser('${u.id}','${esc(u.name)}')" title="Eliminar usuario">🗑</button>` : ''}
       </div>
     </div>`;
   },
@@ -1931,8 +1953,8 @@ const Views = {
   confirmDeleteUser(id, name) {
     Modal.open('Eliminar usuario', `
       <div style="text-align:center;padding:8px 0 16px">
-        <div style="font-size:32px;margin-bottom:12px">🗑</div>
-        <div style="font-size:15px;font-weight:600;margin-bottom:8px">Eliminar usuario</div>
+        <div style="font-size:32px;margin-bottom:12px">&#128465;</div>
+        <div style="font-size:15px;font-weight:600;margin-bottom:8px">Eliminar a <em>${esc(name)}</em>?</div>
         <div style="font-size:13px;color:var(--text-2)">Esta accion es permanente y no se puede deshacer.</div>
       </div>
     `, `
@@ -1955,7 +1977,6 @@ const Views = {
     Toast.success('Usuario eliminado');
     Views.users();
   },
-
 
   // ── DASHBOARD ──
   async dashboard() {
@@ -3793,8 +3814,5 @@ async function init() {
 }
 
 
-
 init();
 </script>
-</body>
-</html>
