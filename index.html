@@ -702,9 +702,6 @@ td .text-secondary { font-size: 11px; color: var(--text-2); }
 // JSONP — global, usada por Auth y Sync
 // ════════════════════════════════════════════
 function fetchJSONP(url) {
-  // Agregar token de seguridad automáticamente
-  const sep = url.includes('?') ? '&' : '?';
-  const tokenParam = CONFIG.API_TOKEN ? sep + 'token=' + encodeURIComponent(CONFIG.API_TOKEN) : '';
   return new Promise((resolve, reject) => {
     const cbName = '__synclick_cb_' + Date.now() + '_' + Math.random().toString(36).slice(2,6);
     const script = document.createElement('script');
@@ -718,7 +715,8 @@ function fetchJSONP(url) {
       if (script.parentNode) script.parentNode.removeChild(script);
     }
     window[cbName] = (data) => { cleanup(); resolve(data); };
-    script.src = url + tokenParam + '&callback=' + cbName;
+    const tok = (CONFIG.API_TOKEN && CONFIG.API_TOKEN !== 'TU_TOKEN_AQUI') ? ('&token=' + encodeURIComponent(CONFIG.API_TOKEN)) : '';
+    script.src = url + (url.includes('?') ? '' : '?') + tok + '&callback=' + cbName;
     script.onerror = () => { cleanup(); reject(new Error('JSONP load error')); };
     document.head.appendChild(script);
   });
@@ -727,7 +725,7 @@ function fetchJSONP(url) {
 const CONFIG = {
   // ⬇ Pegá tu URL de Apps Script aquí para que todos los usuarios la tengan automáticamente
   GAS_URL: localStorage.getItem('gas_url') || 'https://script.google.com/macros/s/AKfycbxHEcRtfuKIrTjwTqmFRehk0eAj-1kdSWV-xl4HD4E_0kKIQCw-GqqWb4CNtv40ICyv/exec',
-  API_TOKEN: 'TU_TOKEN_SECRETO_AQUI', // ← mismo valor que API_TOKEN en Code.gs
+  API_TOKEN: localStorage.getItem('api_token') || 'TU_TOKEN_AQUI',
   SYNC_INTERVAL: 30000,
   APP_VERSION: '1.0.0',
   CURRENT_USER: null, // set by Auth after login
@@ -932,7 +930,7 @@ const now = () => new Date().toISOString();
 const fmtDate = d => d ? new Date(d).toLocaleDateString('es-AR', {day:'2-digit',month:'2-digit',year:'numeric'}) : '—';
 const fmtDatetime = d => d ? new Date(d).toLocaleString('es-AR', {day:'2-digit',month:'2-digit',year:'2-digit',hour:'2-digit',minute:'2-digit'}) : '—';
 const initials = (n='') => n.split(' ').slice(0,2).map(w=>w[0]||'').join('').toUpperCase() || '?';
-const esc = s => String(s||'').replace(/&/g,'\u0026amp;').replace(/</g,'\u0026lt;').replace(/>/g,'\u0026gt;');
+const esc = s => { const t={'&':'&'+'amp;','<':'&'+'lt;','>':'&'+'gt;'}; return String(s||'').replace(/[&<>]/g, c => t[c]); };
 
 const STATUS_LABELS = { prospecto:'Prospecto', cliente:'Cliente', inactivo:'Inactivo', otro:'Otro' };
 const GESTION_TYPES = ['Llamada','Notificación','Campaña','Reunión','Visita','Tarea','Nota','Cambio de estado'];
@@ -1086,12 +1084,11 @@ const Sync = (() => {
   // Envío a GAS con no-cors — la respuesta es "opaca" (status=0, ok=false)
   // pero los datos SÍ llegan al servidor. Tratamos status=0 como éxito.
   async function sendToGAS(item) {
-    const payload = Object.assign({}, item, { token: CONFIG.API_TOKEN });
     const resp = await fetch(CONFIG.GAS_URL, {
       method: 'POST',
       mode: 'no-cors',
       headers: { 'Content-Type': 'text/plain' },
-      body: JSON.stringify(payload),
+      body: JSON.stringify(Object.assign({}, item, { token: CONFIG.API_TOKEN })),
     });
     return { ok: resp.status === 0 || resp.ok, opaque: resp.type === 'opaque' };
   }
@@ -1805,7 +1802,7 @@ const Views = {
         <button class="btn btn-ghost btn-sm" onclick="Views.showEditUserModal('${u.id}')" title="Editar">✎</button>
         <button class="btn btn-ghost btn-sm" onclick="Views.showChangePassword('${u.id}')" title="Cambiar contraseña">🔑</button>
         ${!isSelf ? `<button class="btn btn-${u.active?'danger':'secondary'} btn-sm" onclick="Views.toggleUserActive('${u.id}')" title="${u.active?'Desactivar':'Activar'}">${u.active?'🚫':'✓'}</button>` : ''}
-        ${!isSelf ? `<button class="btn btn-danger btn-sm" onclick="Views.confirmDeleteUser('${u.id}','${esc(u.name)}')" title="Eliminar usuario">🗑</button>` : ''}
+        ${!isSelf ? `<button class="btn btn-danger btn-sm" onclick="Views.confirmDeleteUser('${u.id}','${esc(u.name)}')" title="Eliminar">🗑</button>` : ''}
       </div>
     </div>`;
   },
@@ -1935,12 +1932,12 @@ const Views = {
     Modal.open('Eliminar usuario', `
       <div style="text-align:center;padding:8px 0 16px">
         <div style="font-size:32px;margin-bottom:12px">🗑</div>
-        <div style="font-size:15px;font-weight:600;margin-bottom:8px">¿Eliminar a <em>${esc(name)}</em>?</div>
-        <div style="font-size:13px;color:var(--text-2)">Esta acción es permanente y no se puede deshacer.<br>El usuario será eliminado del sistema y del servidor.</div>
+        <div style="font-size:15px;font-weight:600;margin-bottom:8px">Eliminar usuario</div>
+        <div style="font-size:13px;color:var(--text-2)">Esta accion es permanente y no se puede deshacer.</div>
       </div>
     `, `
       <button class="btn btn-secondary" onclick="Modal.close()">Cancelar</button>
-      <button class="btn btn-danger" onclick="Views.deleteUser('${id}')">Sí, eliminar</button>
+      <button class="btn btn-danger" onclick="Views.deleteUser('${id}')">Si, eliminar</button>
     `);
   },
 
@@ -1950,14 +1947,15 @@ const Views = {
     if (!user) { Modal.close(); Toast.error('Usuario no encontrado'); return; }
     if (user.role === 'admin') {
       const admins = allUsers.filter(u => u.role === 'admin');
-      if (admins.length <= 1) { Toast.error('No podés eliminar al único administrador'); return; }
+      if (admins.length <= 1) { Toast.error('No podes eliminar al unico administrador'); return; }
     }
     await Sync.enqueue('delete', 'users', id, {});
     await Sync.forceSync();
     Modal.close();
-    Toast.success('Usuario "' + user.name + '" eliminado');
+    Toast.success('Usuario eliminado');
     Views.users();
   },
+
 
   // ── DASHBOARD ──
   async dashboard() {
